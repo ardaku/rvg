@@ -39,10 +39,14 @@ rvg_version: u16,      // must be zero
 15u32 ([T;2])     // "Quad2d"
 16u32 ([T;3])     // "Cubic3d"
 17u32 ([T;2])     // "Cubic2d"
-18u32 ([u32;3])   // "NextImage" [id, anim: (style: u16, amount: i16), time_delay: (num: u16, den: u16)]
-                  //             anim.style = 0: linear
-                  //             anim.style = 1: exponential (faster at beginning and end of animation)
-                  //
-                  // On "NextImage" rendering stops.
-19u32             // "BranchImage"
+18u32 ([u32;1])   // "BranchImage" [id]. On "BranchImage" rendering stops.
+                  // Following branch images are alternate branches from the current frame image.
+19u32 ([u32;2])   // "Animate" [anim: (style: u16, amount: i16), time_delay: (num: u16, den: u16)].
+                  //             anim.style = 0: jump - no animation
+                  //             anim.style = 1: linear (constant speed)
+                  //             anim.style = 2: exponential (faster at beginning and end of animation)
+                  //             anim.style = 3: fade
+20u32 (...TODO)   // "QuaternionTransform3d"
+21u32 (...TODO)   // "QuaternionTransform2d"
+
 ```
