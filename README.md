@@ -11,4 +11,4 @@ This program will create an RVG from an SVG.
 This program lets you edit RVG files the same way inkscape lets you edit SVG files.
 
 # Format
-See RVG.md for more details on the encoding.
+See [RVG.md](RVG.md) for more details on the encoding.
