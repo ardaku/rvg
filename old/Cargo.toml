@@ -1,0 +1,12 @@
+[package]
+name = "rvg"
+version = "0.1.0"
+authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+flatbuffers = "0.6"
+
+[features]
+default = []
+svg = []

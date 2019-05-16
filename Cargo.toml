@@ -1,8 +1,8 @@
-[package]
-name = "rvg"
-version = "0.1.0"
-authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
-edition = "2018"
+[workspace]
 
-[dependencies]
-flatbuffers = "0.6"
+members = [
+    "rvg",
+    "rvgfrom",
+    "rvgshow",
+    "rvgedit",
+]

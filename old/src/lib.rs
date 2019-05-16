@@ -3,6 +3,8 @@ extern crate flatbuffers;
 #[allow(dead_code, unused_imports)]
 #[path = "../rvg_generated.rs"]
 mod rvg_generated;
+
+//! Automatically generated API.
 pub use rvg_generated::rvg;
 
 use std::io::Read;
