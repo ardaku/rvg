@@ -1,26 +1,22 @@
-# Header (64 bits)
-## Format Tag
-```rust
-"RVG0" // 4 bytes
+# RVG Format Spec
+RVG files are stored similarly to zip files.
 ```
-## Compression Algorithm
-```rust
-0u32 // Currently this is the only supported compression algorithm (DEFLATE).
-```
-
-# Compressed Data
-## Header (128 bits)
-```rust
-width: u32,            //
-height: u32,           //
-background_color: u32, // sRGBA
-type_size: u8,         // 1-128: number of bits per number (T)
-unit_size: u8,         // 1-128: subpixel positioning bits
-rvg_version: u16,      // must be zero
+# Assuming all graphics are 32 bytes when deflated.
+DEFLATED_GRAPHIC0 @0
+DEFLATED_GRAPHIC1 @32
+DEFLATED_GRAPHIC2 @64
+DEFLATED_GRAPHIC3 @96
+# Footer
+PTR=0      # 32-bit pointer.
+TRANSITION # 32-bit transition id
+TYPE       # 32-bit type.
+ID         # 32-bit identification.
+VERSION_COMPRESSION_FILETYPE @130
 ```
 
 ## Base Operations
 ```rust
+// Likely to change soon.
 0u32              // "Eof" End of File.
 1u32 (id: u32)    // "Tag" ID Tag for next operation.
 2u32              // "GroupOpen" Operations following will be grouped together.

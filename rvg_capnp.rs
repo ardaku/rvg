@@ -162,7 +162,7 @@ pub mod color {
   impl Pipeline  {
   }
   mod _private {
-    use capnp::private::layout;
+    
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 0 };
     pub const TYPE_ID: u64 = 0x84a0_c68b_e8dc_4730;
   }
@@ -219,7 +219,7 @@ pub mod bitmap {
       self.reader.get_data_field::<u16>(0)
     }
     #[inline]
-    pub fn get_pixels(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,::rvg_capnp::color::Owned>> {
+    pub fn get_pixels(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::rvg_capnp::color::Owned>> {
       ::capnp::traits::FromPointerReaderRefDefault::get_from_pointer(&self.reader.get_pointer_field(0), ::std::ptr::null())
     }
     pub fn has_pixels(&self) -> bool {
@@ -288,15 +288,15 @@ pub mod bitmap {
       self.builder.set_data_field::<u16>(0, value);
     }
     #[inline]
-    pub fn get_pixels(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,::rvg_capnp::color::Owned>> {
+    pub fn get_pixels(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::rvg_capnp::color::Owned>> {
       ::capnp::traits::FromPointerBuilderRefDefault::get_from_pointer(self.builder.get_pointer_field(0), ::std::ptr::null())
     }
     #[inline]
-    pub fn set_pixels(&mut self, value: ::capnp::struct_list::Reader<'a,::rvg_capnp::color::Owned>) -> ::capnp::Result<()> {
+    pub fn set_pixels(&mut self, value: ::capnp::struct_list::Reader<'a,crate::rvg_capnp::color::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_pixels(self, size: u32) -> ::capnp::struct_list::Builder<'a,::rvg_capnp::color::Owned> {
+    pub fn init_pixels(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::rvg_capnp::color::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
     pub fn has_pixels(&self) -> bool {
@@ -313,7 +313,7 @@ pub mod bitmap {
   impl Pipeline  {
   }
   mod _private {
-    use capnp::private::layout;
+    
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 1 };
     pub const TYPE_ID: u64 = 0xc3d3_5bd7_aab2_0c54;
   }
@@ -378,7 +378,7 @@ pub mod graphic {
       self.reader.get_data_field::<u16>(1)
     }
     #[inline]
-    pub fn get_operations(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,::rvg_capnp::operation::Owned>> {
+    pub fn get_operations(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::rvg_capnp::operation::Owned>> {
       ::capnp::traits::FromPointerReaderRefDefault::get_from_pointer(&self.reader.get_pointer_field(0), ::std::ptr::null())
     }
     pub fn has_operations(&self) -> bool {
@@ -392,21 +392,21 @@ pub mod graphic {
       !self.reader.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_colors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,::rvg_capnp::color::Owned>> {
+    pub fn get_colors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::rvg_capnp::color::Owned>> {
       ::capnp::traits::FromPointerReaderRefDefault::get_from_pointer(&self.reader.get_pointer_field(2), ::std::ptr::null())
     }
     pub fn has_colors(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
     #[inline]
-    pub fn get_bitmaps(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,::rvg_capnp::bitmap::Owned>> {
+    pub fn get_bitmaps(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::rvg_capnp::bitmap::Owned>> {
       ::capnp::traits::FromPointerReaderRefDefault::get_from_pointer(&self.reader.get_pointer_field(3), ::std::ptr::null())
     }
     pub fn has_bitmaps(&self) -> bool {
       !self.reader.get_pointer_field(3).is_null()
     }
     #[inline]
-    pub fn get_glyphs(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,::rvg_capnp::graphic::Owned>> {
+    pub fn get_glyphs(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::rvg_capnp::graphic::Owned>> {
       ::capnp::traits::FromPointerReaderRefDefault::get_from_pointer(&self.reader.get_pointer_field(4), ::std::ptr::null())
     }
     pub fn has_glyphs(&self) -> bool {
@@ -491,15 +491,15 @@ pub mod graphic {
       self.builder.set_data_field::<u16>(1, value);
     }
     #[inline]
-    pub fn get_operations(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,::rvg_capnp::operation::Owned>> {
+    pub fn get_operations(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::rvg_capnp::operation::Owned>> {
       ::capnp::traits::FromPointerBuilderRefDefault::get_from_pointer(self.builder.get_pointer_field(0), ::std::ptr::null())
     }
     #[inline]
-    pub fn set_operations(&mut self, value: ::capnp::struct_list::Reader<'a,::rvg_capnp::operation::Owned>) -> ::capnp::Result<()> {
+    pub fn set_operations(&mut self, value: ::capnp::struct_list::Reader<'a,crate::rvg_capnp::operation::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_operations(self, size: u32) -> ::capnp::struct_list::Builder<'a,::rvg_capnp::operation::Owned> {
+    pub fn init_operations(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::rvg_capnp::operation::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
     pub fn has_operations(&self) -> bool {
@@ -521,45 +521,45 @@ pub mod graphic {
       !self.builder.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_colors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,::rvg_capnp::color::Owned>> {
+    pub fn get_colors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::rvg_capnp::color::Owned>> {
       ::capnp::traits::FromPointerBuilderRefDefault::get_from_pointer(self.builder.get_pointer_field(2), ::std::ptr::null())
     }
     #[inline]
-    pub fn set_colors(&mut self, value: ::capnp::struct_list::Reader<'a,::rvg_capnp::color::Owned>) -> ::capnp::Result<()> {
+    pub fn set_colors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::rvg_capnp::color::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
     }
     #[inline]
-    pub fn init_colors(self, size: u32) -> ::capnp::struct_list::Builder<'a,::rvg_capnp::color::Owned> {
+    pub fn init_colors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::rvg_capnp::color::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
     }
     pub fn has_colors(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
     }
     #[inline]
-    pub fn get_bitmaps(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,::rvg_capnp::bitmap::Owned>> {
+    pub fn get_bitmaps(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::rvg_capnp::bitmap::Owned>> {
       ::capnp::traits::FromPointerBuilderRefDefault::get_from_pointer(self.builder.get_pointer_field(3), ::std::ptr::null())
     }
     #[inline]
-    pub fn set_bitmaps(&mut self, value: ::capnp::struct_list::Reader<'a,::rvg_capnp::bitmap::Owned>) -> ::capnp::Result<()> {
+    pub fn set_bitmaps(&mut self, value: ::capnp::struct_list::Reader<'a,crate::rvg_capnp::bitmap::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(3), value, false)
     }
     #[inline]
-    pub fn init_bitmaps(self, size: u32) -> ::capnp::struct_list::Builder<'a,::rvg_capnp::bitmap::Owned> {
+    pub fn init_bitmaps(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::rvg_capnp::bitmap::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(3), size)
     }
     pub fn has_bitmaps(&self) -> bool {
       !self.builder.get_pointer_field(3).is_null()
     }
     #[inline]
-    pub fn get_glyphs(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,::rvg_capnp::graphic::Owned>> {
+    pub fn get_glyphs(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::rvg_capnp::graphic::Owned>> {
       ::capnp::traits::FromPointerBuilderRefDefault::get_from_pointer(self.builder.get_pointer_field(4), ::std::ptr::null())
     }
     #[inline]
-    pub fn set_glyphs(&mut self, value: ::capnp::struct_list::Reader<'a,::rvg_capnp::graphic::Owned>) -> ::capnp::Result<()> {
+    pub fn set_glyphs(&mut self, value: ::capnp::struct_list::Reader<'a,crate::rvg_capnp::graphic::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(4), value, false)
     }
     #[inline]
-    pub fn init_glyphs(self, size: u32) -> ::capnp::struct_list::Builder<'a,::rvg_capnp::graphic::Owned> {
+    pub fn init_glyphs(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::rvg_capnp::graphic::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(4), size)
     }
     pub fn has_glyphs(&self) -> bool {
@@ -576,7 +576,7 @@ pub mod graphic {
   impl Pipeline  {
   }
   mod _private {
-    use capnp::private::layout;
+    
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 5 };
     pub const TYPE_ID: u64 = 0x80bd_eb89_15f3_a178;
   }
@@ -680,7 +680,7 @@ pub mod operation {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_path_op(self) -> ::std::result::Result<::rvg_capnp::PathOp,::capnp::NotInSchema> {
+    pub fn get_path_op(self) -> ::std::result::Result<crate::rvg_capnp::PathOp,::capnp::NotInSchema> {
       ::capnp::traits::FromU16::from_u16(self.reader.get_data_field::<u16>(0))
     }
     #[inline]
@@ -742,11 +742,11 @@ pub mod operation {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn get_path_op(self) -> ::std::result::Result<::rvg_capnp::PathOp,::capnp::NotInSchema> {
+    pub fn get_path_op(self) -> ::std::result::Result<crate::rvg_capnp::PathOp,::capnp::NotInSchema> {
       ::capnp::traits::FromU16::from_u16(self.builder.get_data_field::<u16>(0))
     }
     #[inline]
-    pub fn set_path_op(&mut self, value: ::rvg_capnp::PathOp)  {
+    pub fn set_path_op(&mut self, value: crate::rvg_capnp::PathOp)  {
       self.builder.set_data_field::<u16>(0, value as u16)
     }
     #[inline]
@@ -768,7 +768,7 @@ pub mod operation {
   impl Pipeline  {
   }
   mod _private {
-    use capnp::private::layout;
+    
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 0 };
     pub const TYPE_ID: u64 = 0x9210_1799_9776_e1fa;
   }

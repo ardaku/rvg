@@ -2,7 +2,7 @@
 name = "rvg"
 version = "0.1.0"
 authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
-# edition = "2018"
+edition = "2018"
 
 [dependencies]
-capnp = "0.9"
+miniz_oxide = "0.2"
