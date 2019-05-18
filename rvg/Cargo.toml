@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 miniz_oxide = "0.2"
+
+[dev-dependencies]
+usvg = "0.6"

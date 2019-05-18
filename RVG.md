@@ -1,17 +1,17 @@
 # RVG Format Spec
 RVG files are stored similarly to zip files.
 ```
-# Assuming all graphics are 32 bytes when deflated.
-DEFLATED_GRAPHIC0 @0
-DEFLATED_GRAPHIC1 @32
-DEFLATED_GRAPHIC2 @64
-DEFLATED_GRAPHIC3 @96
-# Footer
-PTR=0      # 32-bit pointer.
-TRANSITION # 32-bit transition id
-TYPE       # 32-bit type.
-ID         # 32-bit identification.
-VERSION_COMPRESSION_FILETYPE @130
+# DEFLATED BLOCKS
+TYPE       # 32-bit block type.
+ID         # 32-bit block ID.
+DETAILS    # 16-bit bitfield details.
+AR         # 16-bit aspect ratio.
+BGCOLOR    # 32-bit sRGBA color.
+LENGTH     # 32-bit length.
+OPS        # [16-bit]
+
+# RAW
+FORMAT # 32 bits
 ```
 
 ## Base Operations

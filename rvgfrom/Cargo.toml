@@ -7,3 +7,6 @@ edition = "2018"
 [dependencies]
 usvg = "0.6"
 rvg = { path = "../rvg" }
+
+[dev-dependencies]
+
