@@ -31,7 +31,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
         .to_svgdom()
         .with_write_opt(&usvg::svgdom::WriteOptions::default())
         .to_string();
-    println!("SVG: {}", svg);
+//    println!("SVG: {}", svg);
 
     // Render
     let doc = Document::from_str(&svg).unwrap();
@@ -261,7 +261,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                     panic!("Relative not support.");
                                 }
                                 // Shall be implemented as just a line back to last move.
-                                unimplemented!();
+                                // unimplemented!();
                             }
                             a => {
                                 println!("WARNING: Path Unknown {:?}", a);
@@ -273,8 +273,9 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
 
                 // END PATH
             }
+            ElementId::Defs => { /* IGNORE */ }
             a => {
-                println!("WARNING: Element Unknown {}", a);
+                println!("WARNING: Element Unknown \"{}\"", a);
             }
         }
     }
