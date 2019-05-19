@@ -5,7 +5,8 @@ const FORMAT_ANIM_ALBUM: [u8; 4] = [b'r', b'V', b'g', b'A'];
 
 use std::convert::AsMut;
 
-fn clone_into_array<A, T>(slice: &[T]) -> A
+/// Helper function.
+pub fn clone_into_array<A, T>(slice: &[T]) -> A
 where
     A: Default + AsMut<[T]>,
     T: Clone,
@@ -33,18 +34,13 @@ pub enum BlockTypes {
 /// 
 #[repr(u8)]
 pub enum GraphicOps {
-    // Properties 0x00 - 0x0F
-    /// Set Aspect Ratio to something other than 1:1 (default)
-    Ar = 0x00,
-    /// Set background color
-    Bgc = 0x02,
-
     // Fill (0x10-0x1F)
     Move = 0x10,
     Line = 0x11,
     Quad = 0x12,
     Cubic = 0x13,
     Arc = 0x14,
+    Close = 0x1F,
 
     // Fill (0x20-0x2F)
     Solid = 0x20, // Fill with 1 color (before each vertex)
@@ -87,8 +83,10 @@ impl Block {
     }
 
     /// Create a graphic Block.
-    pub fn graphic(ops: &[u8]) -> Self {
+    pub fn graphic(ar: u32, bgc: u64, ops: &[u8]) -> Self {
         let mut block = Block(vec![BlockTypes::Graphic as u8]);
+        block.0.extend(ar.to_be_bytes().iter());
+        block.0.extend(bgc.to_be_bytes().iter());
         block.0.extend(ops.iter());
         block
     }

@@ -8,4 +8,6 @@ edition = "2018"
 miniz_oxide = "0.2"
 
 [dev-dependencies]
+png = "0.10"
 usvg = "0.6"
+footile = "0.3"
