@@ -4,7 +4,7 @@ use rvg;
 use usvg;
 use usvg::svgdom::WriteBuffer;
 use usvg::svgdom::{
-    AttributeId, AttributeValue, Document, ElementId, FilterSvg, PathSegment, LengthUnit
+    AttributeId, AttributeValue, Document, ElementId, FilterSvg, PathSegment, LengthUnit, Transform
 };
 use std::io::Write;
 use rvg::{Block, GraphicOps};
@@ -43,21 +43,26 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
             let width;
             let height;
 
-            println!("{:?}", attrs);
+//            println!("{:?}", attrs);
 
-            if let Some(&AttributeValue::Length(ref v)) =
+            if let Some(&AttributeValue::ViewBox(ref v)) =
+                attrs.get_value(AttributeId::ViewBox)
+            {
+                width = v.w as f32;
+                height = v.h as f32;
+            } else if let Some(&AttributeValue::Length(ref v)) =
                 attrs.get_value(AttributeId::Width)
             {
-                width = v.num as u32;
+                width = v.num as f32;
+                if let Some(&AttributeValue::Length(ref v)) =
+                    attrs.get_value(AttributeId::Height)
+                {
+                    height = v.num as f32;
+                } else {
+                    panic!("Height unspecified!");
+                }
             } else {
                 panic!("Width unspecified!");
-            }
-            if let Some(&AttributeValue::Length(ref v)) =
-                attrs.get_value(AttributeId::Height)
-            {
-                height = v.num as u32;
-            } else {
-                panic!("Height unspecified!");
             }
 
             (width, height)
@@ -68,7 +73,9 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
         panic!("SVG is an empty file!");
     };
 
-    let ar = (65536.0 * height as f64 / width as f64) as u32;
+    println!("WH: ({} {})", width, height);
+
+    let ar = (65536.0 * height / width) as u32;
     let bgc = 0u64; // TODO
 
     for (id, node) in iter {
@@ -114,43 +121,58 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                 {
                     assert!(w.unit == LengthUnit::Px || w.unit == LengthUnit::None);
                     println!("WIDTH");
-                    let width = (w.num as f32) / (width as f32);
+                    let width = (w.num as f32) / width;
                     let width = (width * 65535.0) as u16;
 
                     ops.push(GraphicOps::Width as u8);
                     ops.extend(width.to_be_bytes().iter());
                 }
 
+                let transform = if let Some(&AttributeValue::Transform(ref t)) =
+                    attrs.get_value(AttributeId::Transform)
+                {
+                    *t
+                } else {
+                    Transform::new(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+                };
+
                 if let Some(&AttributeValue::Path(ref path)) =
                     attrs.get_value(AttributeId::D)
                 {
                     for seg in path.iter() {
-                        println!("{:?}", seg);
                         match seg {
-                            PathSegment::MoveTo {abs, x, y} => {
+                            PathSegment::MoveTo {abs, mut x, mut y} => {
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_x = *x as f32;
-                                old_y = *y as f32;
+                                transform.apply_to(&mut x, &mut y);
+                                old_x = x as f32;
+                                old_y = y as f32;
 
                                 // Generate MoveTo command.
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
+                                let x = old_x / width;
+                                let y = old_y / height;
+                                println!("MOVE {} {}", x, y);
+                                let x = (x * std::u16::MAX as f32) as u16;
+                                let y = (y * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Move as u8);
                                 ops.extend(i.to_be_bytes().iter());
                             }
-                            PathSegment::LineTo {abs, x, y} => {
+                            PathSegment::LineTo {abs, mut x, mut y} => {
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_x = *x as f32;
-                                old_y = *y as f32;
+                                transform.apply_to(&mut x, &mut y);
+                                old_x = x as f32;
+                                old_y = y as f32;
 
                                 // Generate LineTo command.
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
+                                let x = old_x / width;
+                                let y = old_y / height;
+                                println!("LINE {} {}", x, y);
+                                let x = (x * std::u16::MAX as f32) as u16;
+                                let y = (y * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
@@ -159,11 +181,11 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_x = *x as f32;
+                                old_x = transform.apply(*x, 0.0).0 as f32;
 
                                 // Generate LineTo command.
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
+                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
+                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
@@ -172,25 +194,28 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_y = *y as f32;
+                                old_y = transform.apply(0.0, *y).1 as f32;
 
                                 // Generate LineTo command.
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
+                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
+                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
                             }
-                            PathSegment::Quadratic {abs, x1, y1, x, y} => {
+                            PathSegment::Quadratic {abs, mut x1, mut y1, mut x, mut y} => {
+                                transform.apply_to(&mut x1, &mut y1);
+                                transform.apply_to(&mut x, &mut y);
+
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_x = *x as f32;
-                                old_y = *y as f32;
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
-                                let x1 = ((*x1 as f32 / width as f32) * std::u16::MAX as f32) as u16;
-                                let y1 = ((*y1 as f32 / height as f32) * std::u16::MAX as f32) as u16;
+                                old_x = x as f32;
+                                old_y = y as f32;
+                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
+                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
+                                let x1 = ((x1 as f32 / width) * std::u16::MAX as f32) as u16;
+                                let y1 = ((y1 as f32 / height) * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x1,y1));
                                 let j = search_add(&mut pts, (x,y));
 
@@ -200,24 +225,28 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                             }
                             PathSegment::CurveTo {
                                 abs,
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                x,
-                                y,
+                                mut x1,
+                                mut y1,
+                                mut x2,
+                                mut y2,
+                                mut x,
+                                mut y,
                             } => {
+                                transform.apply_to(&mut x1, &mut y1);
+                                transform.apply_to(&mut x2, &mut y2);
+                                transform.apply_to(&mut x, &mut y);
+
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
-                                old_x = *x as f32;
-                                old_y = *y as f32;
-                                let x = ((old_x / width as f32) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height as f32) * std::u16::MAX as f32) as u16;
-                                let x1 = ((*x1 as f32 / width as f32) * std::u16::MAX as f32) as u16;
-                                let y1 = ((*y1 as f32 / height as f32) * std::u16::MAX as f32) as u16;
-                                let x2 = ((*x2 as f32 / width as f32) * std::u16::MAX as f32) as u16;
-                                let y2 = ((*y2 as f32 / height as f32) * std::u16::MAX as f32) as u16;
+                                old_x = x as f32;
+                                old_y = y as f32;
+                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
+                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
+                                let x1 = ((x1 as f32 / width) * std::u16::MAX as f32) as u16;
+                                let y1 = ((y1 as f32 / height) * std::u16::MAX as f32) as u16;
+                                let x2 = ((x2 as f32 / width) * std::u16::MAX as f32) as u16;
+                                let y2 = ((y2 as f32 / height) * std::u16::MAX as f32) as u16;
                                 let i = search_add(&mut pts, (x1,y1));
                                 let j = search_add(&mut pts, (x2,y2));
                                 let k = search_add(&mut pts, (x,y));
@@ -239,6 +268,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                             }
                         }
                     }
+                    ops.push(GraphicOps::Close as u8);
                 }
 
                 // END PATH
