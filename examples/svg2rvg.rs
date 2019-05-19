@@ -31,7 +31,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
         .to_svgdom()
         .with_write_opt(&usvg::svgdom::WriteOptions::default())
         .to_string();
-//    println!("SVG: {}", svg);
+    println!("SVG: {}", svg);
 
     // Render
     let doc = Document::from_str(&svg).unwrap();
@@ -86,20 +86,21 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
 
                 let attrs = node.attributes();
 
-                if let Some(&AttributeValue::Color(ref c)) =
+                let (red, green, blue) = if let Some(&AttributeValue::Color(ref c)) =
                     attrs.get_value(AttributeId::Fill)
                 {
-                    let red = (c.red as u16) * 256;
-                    let green = (c.green as u16) * 256;
-                    let blue = (c.blue as u16) * 256;
-                    let alpha = 65535u16;
-
-                    ops.push(GraphicOps::Solid as u8);
-                    ops.extend(red.to_be_bytes().iter());
-                    ops.extend(green.to_be_bytes().iter());
-                    ops.extend(blue.to_be_bytes().iter());
-                    ops.extend(alpha.to_be_bytes().iter());
-                }
+                    ((c.red as u16) * 256,
+                    (c.green as u16) * 256,
+                    (c.blue as u16) * 256)
+                } else {
+                    (0, 0, 0)
+                };
+                let alpha = 65535u16;
+                ops.push(GraphicOps::Solid as u8);
+                ops.extend(red.to_be_bytes().iter());
+                ops.extend(green.to_be_bytes().iter());
+                ops.extend(blue.to_be_bytes().iter());
+                ops.extend(alpha.to_be_bytes().iter());
 
                 if let Some(&AttributeValue::Color(ref c)) =
                     attrs.get_value(AttributeId::Stroke)
