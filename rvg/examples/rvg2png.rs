@@ -1,5 +1,5 @@
 use footile::{PathBuilder, Raster, Plotter, Rgba8, PixFmt};
-use rvg::{Rvg, BlockTypes, clone_into_array, GraphicOps};
+use rvg::{Rvg, BlockTypes, clone_into_array};
 use std::fs::{File};
 use std::io::{Read};
 use png::{self, HasParameters};
@@ -16,16 +16,19 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
 
         match block_type {
             BlockTypes::Points2d => for i in (1..data.len()).step_by(4) {
-                let x = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
-                let y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
-
-                pts.push((x, y, 0));
+                let mut x = u16::from_be_bytes(clone_into_array(&data[i..i+2])) as f32;
+                let mut y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4])) as f32;
+                x /= std::u16::MAX as f32;
+                y /= std::u16::MAX as f32;
+                pts.push((x, y, 0.0));
             }
             BlockTypes::Points3d => for i in (1..data.len()).step_by(6) {
-                let x = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
-                let y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
-                let z = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
-
+                let mut x = u16::from_be_bytes(clone_into_array(&data[i..i+2])) as f32;
+                let mut y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4])) as f32;
+                let mut z = u16::from_be_bytes(clone_into_array(&data[i+4..i+6])) as f32;
+                x /= std::u16::MAX as f32;
+                y /= std::u16::MAX as f32;
+                z /= std::u16::MAX as f32;
                 pts.push((x, y, z));
             }
             BlockTypes::Graphic => {
@@ -160,9 +163,12 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                         } // Change stroke color
                         // Width
                         0x25 => {
-                            println!("WIDTH");
+                            print!("WIDTH");
                             let w = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
-                            pathbuilder = pathbuilder.pen_width(w as f32 * width as f32);
+                            pen_width = w;
+                            let w = w as f32 / std::u16::MAX as f32;
+                            let w = w * width as f32;
+                            pathbuilder = pathbuilder.pen_width(w);
                             println!("({})", w);
                             i += 2;
                         } // Change stroke width
@@ -202,7 +208,7 @@ pub fn write_png(width: u32, height: u32, pixels: &[Rgba8], filename: &str)
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let pixels = vec![Rgba8::default(); 512 * 512];
+//    let pixels = vec![Rgba8::default(); 512 * 512];
     assert_eq!(args.len(), 2);
     let mut rvg = Vec::new();
     let mut f = File::open(&args[1]).unwrap();

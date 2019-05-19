@@ -4,7 +4,7 @@ use rvg;
 use usvg;
 use usvg::svgdom::WriteBuffer;
 use usvg::svgdom::{
-    AttributeId, AttributeValue, Document, ElementId, FilterSvg, PathSegment,
+    AttributeId, AttributeValue, Document, ElementId, FilterSvg, PathSegment, LengthUnit
 };
 use std::io::Write;
 use rvg::{Block, GraphicOps};
@@ -109,7 +109,17 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                     ops.extend(alpha.to_be_bytes().iter());
                 }
 
-                // TODO: Stroke Width
+                if let Some(&AttributeValue::Length(ref w)) =
+                    attrs.get_value(AttributeId::StrokeWidth)
+                {
+                    assert!(w.unit == LengthUnit::Px || w.unit == LengthUnit::None);
+                    println!("WIDTH");
+                    let width = (w.num as f32) / (width as f32);
+                    let width = (width * 65535.0) as u16;
+
+                    ops.push(GraphicOps::Width as u8);
+                    ops.extend(width.to_be_bytes().iter());
+                }
 
                 if let Some(&AttributeValue::Path(ref path)) =
                     attrs.get_value(AttributeId::D)
