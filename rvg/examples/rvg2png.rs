@@ -39,9 +39,12 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                 let mut p = Plotter::new(width, height);
                 let mut r = Raster::new(p.width(), p.height());
 
-                let mut i = 9;
+                let mut i = 13;
                 loop {
-                    match data[i] {
+                    if i >= data.len() { break };
+                    let opcode = data[i];
+                    i += 1;
+                    match opcode {
                         0x10 => {
                             print!("MOVE");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
@@ -138,7 +141,7 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                         0x23 => { println!("PATTERN"); } // Fill tiled with pattern - Bitmap
                         // Stroke
                         0x24 => {
-                            println!("STROKE");
+                            print!("STROKE");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -173,9 +176,8 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                         // JoinRound
                         0x32 => { println!("JOIN_ROUND"); }
 
-                        _ => panic!("Parse error!")
+                        x => panic!("Parse error {:x}!", x)
                     }
-                    i += 1;
                 }
                 return (width, height, r.as_slice().to_vec());
             }
