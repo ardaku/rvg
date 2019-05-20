@@ -18,17 +18,22 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
             BlockTypes::Points2d => for i in (1..data.len()).step_by(4) {
                 let mut x = u16::from_be_bytes(clone_into_array(&data[i..i+2])) as f32;
                 let mut y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4])) as f32;
-                x /= std::u16::MAX as f32;
-                y /= std::u16::MAX as f32;
+                x -= 24576.0;
+                y -= 24576.0;
+                x /= 16384.0;
+                y /= 16384.0;
                 pts.push((x, y, 0.0));
             }
             BlockTypes::Points3d => for i in (1..data.len()).step_by(6) {
                 let mut x = u16::from_be_bytes(clone_into_array(&data[i..i+2])) as f32;
                 let mut y = u16::from_be_bytes(clone_into_array(&data[i+2..i+4])) as f32;
                 let mut z = u16::from_be_bytes(clone_into_array(&data[i+4..i+6])) as f32;
-                x /= std::u16::MAX as f32;
-                y /= std::u16::MAX as f32;
-                z /= std::u16::MAX as f32;
+                x -= 24576.0;
+                y -= 24576.0;
+                z -= 24576.0;
+                x /= 16384.0;
+                y /= 16384.0;
+                z /= 16384.0;
                 pts.push((x, y, z));
             }
             BlockTypes::Graphic => {
@@ -90,7 +95,7 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                             let (x2, y2) = (x2 as f32 * width as f32, y2 as f32 * height as f32);
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
                             pathbuilder = pathbuilder.cubic_to(x1, y1, x2, y2, x, y);
-                            println!("({},{},{},{})", x1, y1, x, y);
+                            println!("({},{}.{},{},{},{})", x1, y1, x2, y2, x, y);
                             i += 6;
                         } // Cubic
                         0x14 => {
@@ -99,7 +104,7 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                         } // Arc
                         0x1F => {
                             println!("CLOSE");
-                            let mut path_builder = PathBuilder::new();
+                            let mut path_builder = PathBuilder::new().absolute();
                             std::mem::swap(&mut pathbuilder, &mut path_builder);
                             let path = path_builder.build();
 
@@ -115,11 +120,12 @@ fn png_from_rvg(rvg: Vec<u8>) -> (u32, u32, Vec<Rgba8>) {
                                     pen_color,
                                 );
                             }
+                            pen_width = 0;
                         } // Close
 
                         // Solid
                         0x20 => {
-                            println!("SOLID");
+                            print!("SOLID");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));

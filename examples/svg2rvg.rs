@@ -83,6 +83,8 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
             ElementId::Path => {
                 let mut old_x = 0.0f32;
                 let mut old_y = 0.0f32;
+                let mut orig_x = 0.0f32;
+                let mut orig_y = 0.0f32;
 
                 let attrs = node.attributes();
 
@@ -95,7 +97,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                 } else {
                     (0, 0, 0)
                 };
-                let alpha = 65535u16;
+                let alpha = if attrs.get_value(AttributeId::Fill) != Some(&AttributeValue::None) { 65535u16 } else { 0u16 };
                 ops.push(GraphicOps::Solid as u8);
                 ops.extend(red.to_be_bytes().iter());
                 ops.extend(green.to_be_bytes().iter());
@@ -154,8 +156,8 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 let x = old_x / width;
                                 let y = old_y / height;
                                 println!("MOVE {} {}", x, y);
-                                let x = (x * std::u16::MAX as f32) as u16;
-                                let y = (y * std::u16::MAX as f32) as u16;
+                                let x = (x * 16384 as f32 + 24576.0) as u16;
+                                let y = (y * 16384 as f32 + 24576.0) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Move as u8);
                                 ops.extend(i.to_be_bytes().iter());
@@ -172,8 +174,8 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 let x = old_x / width;
                                 let y = old_y / height;
                                 println!("LINE {} {}", x, y);
-                                let x = (x * std::u16::MAX as f32) as u16;
-                                let y = (y * std::u16::MAX as f32) as u16;
+                                let x = (x * 16384 as f32 + 24576.0) as u16;
+                                let y = (y * 16384 as f32 + 24576.0) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
@@ -185,8 +187,8 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 old_x = transform.apply(*x, 0.0).0 as f32;
 
                                 // Generate LineTo command.
-                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
+                                let x = ((old_x / width) * 16384 as f32 + 24576.0) as u16;
+                                let y = ((old_y / height) * 16384 as f32 + 24576.0) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
@@ -198,25 +200,34 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 old_y = transform.apply(0.0, *y).1 as f32;
 
                                 // Generate LineTo command.
-                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
+                                let x = ((old_x / width) * 16384 as f32 + 24576.0) as u16;
+                                let y = ((old_y / height) * 16384 as f32 + 24576.0) as u16;
                                 let i = search_add(&mut pts, (x,y));
                                 ops.push(GraphicOps::Line as u8);
                                 ops.extend(i.to_be_bytes().iter());
                             }
                             PathSegment::Quadratic {abs, mut x1, mut y1, mut x, mut y} => {
-                                transform.apply_to(&mut x1, &mut y1);
-                                transform.apply_to(&mut x, &mut y);
-
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
+                                transform.apply_to(&mut x1, &mut y1);
+                                transform.apply_to(&mut x, &mut y);
+
                                 old_x = x as f32;
                                 old_y = y as f32;
-                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
-                                let x1 = ((x1 as f32 / width) * std::u16::MAX as f32) as u16;
-                                let y1 = ((y1 as f32 / height) * std::u16::MAX as f32) as u16;
+                                let old_x1 = x1 as f32;
+                                let old_y1 = y1 as f32;
+
+                                let x = old_x / width;
+                                let y = old_y / height;
+                                let x1 = old_x1 / width;
+                                let y1 = old_y1 / height;
+                                println!("QUAD {} {}", x, y);
+                                let x = (x * 16384 as f32 + 24576.0) as u16;
+                                let y = (y * 16384 as f32 + 24576.0) as u16;
+                                let x1 = (x1 * 16384 as f32 + 24576.0) as u16;
+                                let y1 = (y1 * 16384 as f32 + 24576.0) as u16;
+
                                 let i = search_add(&mut pts, (x1,y1));
                                 let j = search_add(&mut pts, (x,y));
 
@@ -233,21 +244,35 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 mut x,
                                 mut y,
                             } => {
+                                if *abs == false {
+                                    panic!("Relative not support.");
+                                }
                                 transform.apply_to(&mut x1, &mut y1);
                                 transform.apply_to(&mut x2, &mut y2);
                                 transform.apply_to(&mut x, &mut y);
 
-                                if *abs == false {
-                                    panic!("Relative not support.");
-                                }
                                 old_x = x as f32;
                                 old_y = y as f32;
-                                let x = ((old_x / width) * std::u16::MAX as f32) as u16;
-                                let y = ((old_y / height) * std::u16::MAX as f32) as u16;
-                                let x1 = ((x1 as f32 / width) * std::u16::MAX as f32) as u16;
-                                let y1 = ((y1 as f32 / height) * std::u16::MAX as f32) as u16;
-                                let x2 = ((x2 as f32 / width) * std::u16::MAX as f32) as u16;
-                                let y2 = ((y2 as f32 / height) * std::u16::MAX as f32) as u16;
+                                let old_x1 = x1 as f32;
+                                let old_y1 = y1 as f32;
+                                let old_x2 = x2 as f32;
+                                let old_y2 = y2 as f32;
+
+                                // Generate LineTo command.
+                                let x = old_x / width;
+                                let y = old_y / height;
+                                let x1 = old_x1 / width;
+                                let y1 = old_y1 / height;
+                                let x2 = old_x2 / width;
+                                let y2 = old_y2 / height;
+                                println!("CUBE {} {}", x, y);
+                                let x = (x * 16384 as f32 + 24576.0) as u16;
+                                let y = (y * 16384 as f32 + 24576.0) as u16;
+                                let x1 = (x1 * 16384 as f32 + 24576.0) as u16;
+                                let y1 = (y1 * 16384 as f32 + 24576.0) as u16;
+                                let x2 = (x2 * 16384 as f32 + 24576.0) as u16;
+                                let y2 = (y2 * 16384 as f32 + 24576.0) as u16;
+
                                 let i = search_add(&mut pts, (x1,y1));
                                 let j = search_add(&mut pts, (x2,y2));
                                 let k = search_add(&mut pts, (x,y));
@@ -261,6 +286,8 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 if *abs == false {
                                     panic!("Relative not support.");
                                 }
+                                old_x = 0.0;
+                                old_y = 0.0;
                                 // Shall be implemented as just a line back to last move.
                                 // unimplemented!();
                             }
@@ -269,7 +296,9 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                             }
                         }
                     }
-                    ops.push(GraphicOps::Close as u8);
+//                    if ops[ops.len() - 1] != GraphicOps::Close as u8 {
+                        ops.push(GraphicOps::Close as u8);
+//                    }
                 }
 
                 // END PATH

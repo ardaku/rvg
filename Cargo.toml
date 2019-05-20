@@ -10,4 +10,4 @@ miniz_oxide = "0.2"
 [dev-dependencies]
 png = "0.10"
 usvg = "0.6"
-footile = "0.3"
+footile = { path = "../footile" } # "0.3"
