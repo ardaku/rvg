@@ -31,7 +31,7 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
         .to_svgdom()
         .with_write_opt(&usvg::svgdom::WriteOptions::default())
         .to_string();
-    println!("SVG: {}", svg);
+//    println!("SVG: {}", svg);
 
     // Render
     let doc = Document::from_str(&svg).unwrap();
@@ -83,8 +83,6 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
             ElementId::Path => {
                 let mut old_x = 0.0f32;
                 let mut old_y = 0.0f32;
-                let mut orig_x = 0.0f32;
-                let mut orig_y = 0.0f32;
 
                 let attrs = node.attributes();
 
