@@ -119,7 +119,7 @@ impl<'a> Iterator for BlockIter<'a> {
 
     fn next(&mut self) -> Option<Block> {
         let len = u32::from_be_bytes(clone_into_array(
-            self.rvg.blocks.get(self.cursor + 0..self.cursor + 4)?,
+            self.rvg.blocks.get(self.cursor..self.cursor + 4)?,
         )) as usize;
         self.cursor += 4;
         let ops = self.rvg.blocks.get(self.cursor..self.cursor + len)?.to_vec();
@@ -135,6 +135,12 @@ pub struct Rvg {
     format: [u8; 4],
     // Uncompressed Graphic Data
     blocks: Vec<u8>,
+}
+
+impl Default for Rvg {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Rvg {
