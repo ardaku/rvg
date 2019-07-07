@@ -4,6 +4,13 @@ version = "0.0.1"
 authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>"]
 edition = "2018"
 
+license = "MIT / BSL-1.0"
+description = "Vector graphics format."
+documentation = "https://docs.rs/rvg"
+homepage = "https://aldarobot.plopgrizzly.com/rvg/"
+repository = "https://github.com/Aldarobot/rvg"
+readme = "README.md"
+
 [dependencies]
 miniz_oxide = "0.2"
 
