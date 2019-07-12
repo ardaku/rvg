@@ -168,7 +168,7 @@ impl Rvg {
     }
 
     /// Create RVG file from file bytes.
-    pub fn from_vec(buf: Vec<u8>) -> Rvg {
+    pub fn from_slice(buf: &[u8]) -> Rvg {
         let format = [
             buf[buf.len() - 4],
             buf[buf.len() - 3],
