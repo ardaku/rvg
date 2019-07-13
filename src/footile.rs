@@ -53,25 +53,20 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                     i += 1;
                     match opcode {
                         0x10 => {
-                            print!("MOVE");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let (x, y, _z) = pts[idx as usize];
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
                             pathbuilder = pathbuilder.move_to(x, y);
-                            println!("({},{})", x, y);
                             i += 2;
                         } // Move
                         0x11 => {
-                            print!("LINE");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let (x, y, _z) = pts[idx as usize];
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
                             pathbuilder = pathbuilder.line_to(x, y);
-                            println!("({},{})", x, y);
                             i += 2;
                         } // Line
                         0x12 => {
-                            print!("QUAD");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let idy = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let (x1, y1, _z1) = pts[idx as usize];
@@ -79,11 +74,9 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                             let (x1, y1) = (x1 as f32 * width as f32, y1 as f32 * height as f32);
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
                             pathbuilder = pathbuilder.quad_to(x1, y1, x, y);
-                            println!("({},{},{},{})", x1, y1, x, y);
                             i += 4;
                         } // Quad
                         0x13 => {
-                            print!("CUBIC");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let idy = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let idz = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -94,15 +87,12 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                             let (x2, y2) = (x2 as f32 * width as f32, y2 as f32 * height as f32);
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
                             pathbuilder = pathbuilder.cubic_to(x1, y1, x2, y2, x, y);
-                            println!("({},{}.{},{},{},{})", x1, y1, x2, y2, x, y);
                             i += 6;
                         } // Cubic
                         0x14 => {
-                            println!("ARC");
                             unimplemented!();
                         } // Arc
                         0x1F => {
-                            println!("CLOSE");
                             let mut path_builder = PathBuilder::new().absolute();
                             std::mem::swap(&mut pathbuilder, &mut path_builder);
                             let path = path_builder.build();
@@ -124,7 +114,6 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
 
                         // Solid
                         0x20 => {
-                            print!("SOLID");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -138,18 +127,16 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
 
                             fill_color = Rgba8::new(r, g, b, a);
 
-                            println!("({},{},{},{})", r, b, b, a);
                             i += 8;
                         } // Fill with 1 color (before each vertex)
                         // Bitmap
-                        0x21 => { println!("BITMAP"); } // Fill with bitmap - stretch (before Move)
+                        0x21 => { } // Fill with bitmap - stretch (before Move)
                         // Tile
-                        0x22 => { println!("TILE"); } // Fill tiled with pattern - Vector Graphics
+                        0x22 => { } // Fill tiled with pattern - Vector Graphics
                         // Pattern
-                        0x23 => { println!("PATTERN"); } // Fill tiled with pattern - Bitmap
+                        0x23 => { } // Fill tiled with pattern - Bitmap
                         // Stroke
                         0x24 => {
-                            print!("STROKE");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -163,29 +150,26 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
 
                             pen_color = Rgba8::new(r, g, b, a);
 
-                            println!("({},{},{},{})", r, b, b, a);
                             i += 8;
                         } // Change stroke color
                         // Width
                         0x25 => {
-                            print!("WIDTH");
                             let w = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             pen_width = w;
                             let w = w as f32 / std::u16::MAX as f32;
                             let w = w * width as f32;
                             pathbuilder = pathbuilder.pen_width(w);
-                            println!("({})", w);
                             i += 2;
                         } // Change stroke width
                         // Dashed
-                        0x26 => { println!("DASHED"); } // Change dash width (0=100% by default)
+                        0x26 => { } // Change dash width (0=100% by default)
 
                         // JoinMiter
-                        0x30 => { println!("JOIN_MITER"); } // `value` for amount
+                        0x30 => { } // `value` for amount
                         // JoinBevel
-                        0x31 => { println!("JOIN_BEVEL"); }
+                        0x31 => { }
                         // JoinRound
-                        0x32 => { println!("JOIN_ROUND"); }
+                        0x32 => { }
 
                         x => panic!("Parse error {:x}!", x)
                     }
@@ -199,8 +183,10 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
 }
 
 /// Render a graphic.
-pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_width: u16) {
+pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: u16, graphic_width: u16) {
     let mut pathbuilder = PathBuilder::new().absolute();
+    let offset_x = x as f32;
+    let offset_y = y as f32;
 
     let rvg = Rvg::from_slice(rvg);
     let mut pts = vec![];
@@ -251,37 +237,30 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_wid
                     i += 1;
                     match opcode {
                         0x10 => {
-                            print!("MOVE");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let (x, y, _z) = pts[idx as usize];
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
-                            pathbuilder = pathbuilder.move_to(x, y);
-                            println!("({},{})", x, y);
+                            pathbuilder = pathbuilder.move_to(x + offset_x, y + offset_y);
                             i += 2;
                         } // Move
                         0x11 => {
-                            print!("LINE");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let (x, y, _z) = pts[idx as usize];
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
-                            pathbuilder = pathbuilder.line_to(x, y);
-                            println!("({},{})", x, y);
+                            pathbuilder = pathbuilder.line_to(x + offset_x, y + offset_y);
                             i += 2;
                         } // Line
                         0x12 => {
-                            print!("QUAD");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let idy = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let (x1, y1, _z1) = pts[idx as usize];
                             let (x, y, _z) = pts[idy as usize];
                             let (x1, y1) = (x1 as f32 * width as f32, y1 as f32 * height as f32);
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
-                            pathbuilder = pathbuilder.quad_to(x1, y1, x, y);
-                            println!("({},{},{},{})", x1, y1, x, y);
+                            pathbuilder = pathbuilder.quad_to(x1 + offset_x, y1 + offset_y, x + offset_x, y + offset_y);
                             i += 4;
                         } // Quad
                         0x13 => {
-                            print!("CUBIC");
                             let idx = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let idy = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let idz = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -291,16 +270,13 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_wid
                             let (x1, y1) = (x1 as f32 * width as f32, y1 as f32 * height as f32);
                             let (x2, y2) = (x2 as f32 * width as f32, y2 as f32 * height as f32);
                             let (x, y) = (x as f32 * width as f32, y as f32 * height as f32);
-                            pathbuilder = pathbuilder.cubic_to(x1, y1, x2, y2, x, y);
-                            println!("({},{}.{},{},{},{})", x1, y1, x2, y2, x, y);
+                            pathbuilder = pathbuilder.cubic_to(x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y, x + offset_x, y + offset_y);
                             i += 6;
                         } // Cubic
                         0x14 => {
-                            println!("ARC");
                             unimplemented!();
                         } // Arc
                         0x1F => {
-                            println!("CLOSE");
                             let mut path_builder = PathBuilder::new().absolute();
                             std::mem::swap(&mut pathbuilder, &mut path_builder);
                             let path = path_builder.build();
@@ -324,7 +300,6 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_wid
 
                         // Solid
                         0x20 => {
-                            print!("SOLID");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -338,18 +313,16 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_wid
 
                             fill_color = Rgba8::new(r, g, b, a);
 
-                            println!("({},{},{},{})", r, b, b, a);
                             i += 8;
                         } // Fill with 1 color (before each vertex)
                         // Bitmap
-                        0x21 => { println!("BITMAP"); } // Fill with bitmap - stretch (before Move)
+                        0x21 => { } // Fill with bitmap - stretch (before Move)
                         // Tile
-                        0x22 => { println!("TILE"); } // Fill tiled with pattern - Vector Graphics
+                        0x22 => { } // Fill tiled with pattern - Vector Graphics
                         // Pattern
-                        0x23 => { println!("PATTERN"); } // Fill tiled with pattern - Bitmap
+                        0x23 => { } // Fill tiled with pattern - Bitmap
                         // Stroke
                         0x24 => {
-                            print!("STROKE");
                             let r = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             let g = u16::from_be_bytes(clone_into_array(&data[i+2..i+4]));
                             let b = u16::from_be_bytes(clone_into_array(&data[i+4..i+6]));
@@ -363,29 +336,26 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, graphic_wid
 
                             pen_color = Rgba8::new(r, g, b, a);
 
-                            println!("({},{},{},{})", r, b, b, a);
                             i += 8;
                         } // Change stroke color
                         // Width
                         0x25 => {
-                            print!("WIDTH");
                             let w = u16::from_be_bytes(clone_into_array(&data[i..i+2]));
                             pen_width = w;
                             let w = w as f32 / std::u16::MAX as f32;
                             let w = w * width as f32;
                             pathbuilder = pathbuilder.pen_width(w);
-                            println!("({})", w);
                             i += 2;
                         } // Change stroke width
                         // Dashed
-                        0x26 => { println!("DASHED"); } // Change dash width (0=100% by default)
+                        0x26 => { } // Change dash width (0=100% by default)
 
                         // JoinMiter
-                        0x30 => { println!("JOIN_MITER"); } // `value` for amount
+                        0x30 => { } // `value` for amount
                         // JoinBevel
-                        0x31 => { println!("JOIN_BEVEL"); }
+                        0x31 => { }
                         // JoinRound
-                        0x32 => { println!("JOIN_ROUND"); }
+                        0x32 => { }
 
                         x => panic!("Parse error {:x}!", x)
                     }
