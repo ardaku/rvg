@@ -1,6 +1,6 @@
 [package]
 name = "rvg"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>"]
 edition = "2018"
 
@@ -12,7 +12,7 @@ repository = "https://github.com/Aldarobot/rvg"
 readme = "README.md"
 
 [dependencies]
-miniz_oxide = "0.2"
+miniz_oxide = "0.3"
 footile = { optional = true, version = "0.3" }
 
 [dev-dependencies]

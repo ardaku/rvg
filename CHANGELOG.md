@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://code.plopgrizzly.com/s
 
 ## [Unreleased]
 
+## [0.0.3] - 2019-11-03
+### Fixed
+- Not compiling without `footile` feature.
+
+### Changed
+- Updated `miniz_oxide` dependency to newest version.
+
 ## [0.0.2] - 2019-07-14
 ### Added
 - Rendering RVG files with footile.
