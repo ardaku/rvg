@@ -1,7 +1,6 @@
-use footile::{PathBuilder, Raster, RasterB, Plotter};
+use pix::{Rgba8, Raster, RasterBuilder, Alpha};
+use footile::{PathBuilder, Plotter};
 use crate::rvg::*;
-
-pub use footile::Rgba8;
 
 /// Render a graphic.
 pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
@@ -38,13 +37,13 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
             BlockTypes::Graphic => {
                 let ar = u32::from_be_bytes(clone_into_array(&data[1..5]));
                 let _bgc = u64::from_be_bytes(clone_into_array(&data[5..13])); // TODO
-                let mut fill_color = Rgba8::new(0, 0, 0, 0);
-                let mut pen_color = Rgba8::new(0, 0, 0, 0);
+                let mut fill_color = Rgba8::with_alpha(0, 0, 0, 0);
+                let mut pen_color = Rgba8::with_alpha(0, 0, 0, 0);
                 let mut pen_width = 0;
                 let width = 512;
                 let height = (512.0 * (ar as f32 / 65536.0)) as u32;
                 let mut p = Plotter::new(width, height);
-                let mut r = Raster::new(p.width(), p.height());
+                let mut r = RasterBuilder::new().with_clear(p.width(), p.height());
 
                 let mut i = 13;
                 loop {
@@ -96,18 +95,28 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                             let mut path_builder = PathBuilder::new().absolute();
                             std::mem::swap(&mut pathbuilder, &mut path_builder);
                             let path = path_builder.build();
-
-                            if fill_color.alpha() != 0 { // Not transparent
-                                r.over(
+    
+                            let alpha: u8 = fill_color.alpha().value().into(); 
+                            if alpha != 0 { // Not transparent
+                                pixops::raster_over(
+                                    &mut r,
                                     p.fill(&path, footile::FillRule::NonZero),
                                     fill_color,
+                                    0,
+                                    0,
                                 );
+                                p.clear_mask();
                             }
-                            if pen_color.alpha() != 0 && pen_width != 0 { // Not transparent
-                                r.over(
+                            let alpha: u8 = pen_color.alpha().value().into();
+                            if alpha != 0 && pen_width != 0 { // Not transparent
+                                pixops::raster_over(
+                                    &mut r,
                                     p.stroke(&path),
                                     pen_color,
+                                    0,
+                                    0,
                                 );
+                                p.clear_mask();
                             }
                             pen_width = 0;
                         } // Close
@@ -125,7 +134,7 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                             let b = (b / 256).min(255) as u8;
                             let a = (a / 256).min(255) as u8;
 
-                            fill_color = Rgba8::new(r, g, b, a);
+                            fill_color = Rgba8::with_alpha(r, g, b, a);
 
                             i += 8;
                         } // Fill with 1 color (before each vertex)
@@ -148,7 +157,7 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
                             let b = (b / 256).min(255) as u8;
                             let a = (a / 256).min(255) as u8;
 
-                            pen_color = Rgba8::new(r, g, b, a);
+                            pen_color = Rgba8::with_alpha(r, g, b, a);
 
                             i += 8;
                         } // Change stroke color
@@ -183,7 +192,7 @@ pub fn graphic_from_rvg(rvg: &[u8]) -> (u32, u32, Vec<Rgba8>) {
 }
 
 /// Render a graphic.
-pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: u16, graphic_width: u16) {
+pub fn render_from_rvg(rvg: &[u8], raster: &mut Raster<Rgba8>, x: u16, y: u16, graphic_width: u16) {
     let mut pathbuilder = PathBuilder::new().absolute();
     let offset_x = x as f32;
     let offset_y = y as f32;
@@ -219,13 +228,12 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: 
             BlockTypes::Graphic => {
                 let ar = u32::from_be_bytes(clone_into_array(&data[1..5]));
                 let _bgc = u64::from_be_bytes(clone_into_array(&data[5..13])); // TODO
-                let mut fill_color = Rgba8::new(0, 0, 0, 0);
-                let mut pen_color = Rgba8::new(0, 0, 0, 0);
+                let mut fill_color = Rgba8::with_alpha(0, 0, 0, 0);
+                let mut pen_color = Rgba8::with_alpha(0, 0, 0, 0);
                 let mut pen_width = 0;
-                let width = width as u32;
-                let height = pixels.len() as u32 / width;
+                let width = raster.width();
+                let height = raster.height();
                 let mut p = Plotter::new(width, height);
-                let r = RasterB::new(p.width(), p.height());
 
                 let width = graphic_width;
                 let height = (graphic_width as f32 * (ar as f32 / 65536.0)) as u32;
@@ -281,19 +289,27 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: 
                             std::mem::swap(&mut pathbuilder, &mut path_builder);
                             let path = path_builder.build();
 
-                            if fill_color.alpha() != 0 { // Not transparent
-                                r.over(
+                            let alpha: u8 = fill_color.alpha().value().into();
+                            if alpha != 0 { // Not transparent
+                                pixops::raster_over(
+                                    raster,
                                     p.fill(&path, footile::FillRule::NonZero),
                                     fill_color,
-                                    pixels,
+                                    0,
+                                    0,
                                 );
+                                p.clear_mask();
                             }
-                            if pen_color.alpha() != 0 && pen_width != 0 { // Not transparent
-                                r.over(
+                            let alpha: u8 = pen_color.alpha().value().into();
+                            if alpha != 0 && pen_width != 0 { // Not transparent
+                                pixops::raster_over(
+                                    raster,
                                     p.stroke(&path),
                                     pen_color,
-                                    pixels,
+                                    0,
+                                    0,
                                 );
+                                p.clear_mask();
                             }
                             pen_width = 0;
                         } // Close
@@ -311,7 +327,7 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: 
                             let b = (b / 256).min(255) as u8;
                             let a = (a / 256).min(255) as u8;
 
-                            fill_color = Rgba8::new(r, g, b, a);
+                            fill_color = Rgba8::with_alpha(r, g, b, a);
 
                             i += 8;
                         } // Fill with 1 color (before each vertex)
@@ -334,7 +350,7 @@ pub fn render_from_rvg(rvg: &[u8], pixels: &mut [Rgba8], width: u16, x: u16, y: 
                             let b = (b / 256).min(255) as u8;
                             let a = (a / 256).min(255) as u8;
 
-                            pen_color = Rgba8::new(r, g, b, a);
+                            pen_color = Rgba8::with_alpha(r, g, b, a);
 
                             i += 8;
                         } // Change stroke color

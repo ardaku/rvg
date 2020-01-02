@@ -1,7 +1,7 @@
 mod rvg;
-#[cfg(feature = "footile")]
+#[cfg(feature = "render")]
 mod footile;
 
 pub use rvg::{Block, BlockTypes, Rvg, GraphicOps, clone_into_array};
-#[cfg(feature = "footile")]
+#[cfg(feature = "render")]
 pub use crate::footile::*;
