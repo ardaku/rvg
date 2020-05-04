@@ -13,15 +13,14 @@ readme = "README.md"
 
 [dependencies]
 miniz_oxide = "0.3"
-footile = { optional = true, version = "0.3" }
-pix = { optional = true, version = "0.7" }
-pixops = { optional = true, version = "0.0.2" }
+footile = { optional = true, version = "0.4" }
+pix = { optional = true, version = "0.12" }
 
 [dev-dependencies]
-png = "0.10"
-usvg = "0.6"
-footile = "0.3" #{ path = "../footile" } # "0.3"
+png_pong = "0.4"
+usvg = "0.9"
+footile = "0.4"
 
 [features]
 default = []
-render = ["footile", "pix", "pixops"]
+render = ["footile", "pix"]
