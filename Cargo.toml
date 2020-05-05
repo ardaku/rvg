@@ -5,22 +5,22 @@ authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>"]
 edition = "2018"
 
 license = "MIT / BSL-1.0"
-description = "Vector graphics format."
+description = "Vector graphics file format."
 documentation = "https://docs.rs/rvg"
-homepage = "https://aldarobot.plopgrizzly.com/rvg/"
-repository = "https://github.com/Aldarobot/rvg"
+repository = "https://github.com/libcala/rvg"
 readme = "README.md"
 
 [dependencies]
-miniz_oxide = "0.3"
-footile = { optional = true, version = "0.4" }
-pix = { optional = true, version = "0.12" }
+ruzstd = "0.2" # For Decoding ZStd Compression
+zstd = { optional = true, version = "0.5" } # For Encoding ZStd Compression
+footile = "0.4"
+pix = "0.12"
 
 [dev-dependencies]
 png_pong = "0.4"
 usvg = "0.9"
-footile = "0.4"
+roxmltree = "0.11"
+svgtypes = "0.5"
 
 [features]
-default = []
-render = ["footile", "pix"]
+default = ["zstd"]

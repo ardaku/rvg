@@ -28,21 +28,20 @@ BITMAPS: [Bitmap]?                      # Optional Bitmaps (until EOF)
 16u8: UserDefined(Nu8)                  # Attr. N dimensions (until [NAN])
 
 # Group (paths)
-ATTRIBUTES: [u8]                        # List vertex attributes used until 0
 PATH: [PathOp]                          # List PathOps
 
 # PathOp
 0u8: End                                # End list of PathOps
 1u8: Close                              # Close PathOp
-2u8: Move(u32, ...)                     # Move PathOp (Attribute Indices)
-3u8: Line(u32, ...)                     # Line PathOp (Attribute Indices)
-4u8: Quad(u32, u32, ...)                # Quad PathOp (Attribute Indices)
-5u8: Cubic(u32, u32, u32, ...)          # Cubic PathOp (Attribute Indices)
+2u8: Move(u32)                          # Move PathOp (Attribute Indices)
+3u8: Line(u32)                          # Line PathOp (Attribute Indices)
+4u8: Quad(u32, u32)                     # Quad PathOp (Attribute Indices)
+5u8: Cubic(u32, u32, u32)               # Cubic PathOp (Attribute Indices)
 
 # Graphic (Also "Model")
 WIDTH: f32
 HEIGHT: f32
-GROUPS: [(u32, GroupProperties)]        # Group ID & Property list (MAX to end).
+GROUPS: [(u32, [GroupProperties])]        # Group ID & Property list (MAX to end).
 FRAMES: [Frame]
 
 # GroupProperties
@@ -82,5 +81,5 @@ OPS: [TransformOp]                      # List of Transform Operations
 # Bitmap
 WIDTH: u16
 HEIGHT: u16
-SRGBA: [f32x4]
+SRGBA: [u8]
 ```
