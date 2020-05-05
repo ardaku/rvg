@@ -1,69 +1,86 @@
 # RVG Format Spec
-RVG files are stored similarly to zip files.
+RVG files are a binary SVG-like document, with 3D, animations, and albums.
+
+## Example File Layout
+After decompressing with zstandard, layout will look like this.  Floating point
+numbers may only be NAN if they are closing a section of the file.
+
 ```
-# DEFLATED BLOCKS
-TYPE       # 32-bit block type.
-ID         # 32-bit block ID.
-DETAILS    # 16-bit bitfield details.
-AR         # 16-bit aspect ratio.
-BGCOLOR    # 32-bit sRGBA color.
-LENGTH     # 32-bit length.
-OPS        # [16-bit]
+# RvgFile
+FORMAT: u32                             # b"rVg\x00"
+ATTRIBUTE_LIST: [Attribute]             # List of vertex attributes
+VERTEX_LIST: [f32x(2+N)]                # 2D Points + Attributes (until NAN)
+GROUP: [Group]                          # Groups until empty path
+GRAPHICS: [Graphic]                     # Graphics
+BITMAPS: [Bitmap]?                      # Optional Bitmaps (until EOF)
 
-# RAW
-FORMAT # 32 bits
+# Attribute
+0u8: End                                # End attribute List
+1u8: Z                                  # Z, 1 dimensions (until NAN)
+2u8: UvTextureCoordinates               # UV Texcoords, 2 dim. (until NAN)
+3u8: Rgb                                # RGB Gradient, 3 dim. (until NAN)
+4u8: Rgba                               # RGBA Gradient, 4 dim. (until NAN)
+5u8: Alpha                              # Alpha Gradient, 1 dim. (until NAN)
+6u8: Normal2D                           # 2D Normal (until NAN)
+7u8: Normal3D                           # 3D Normal (until NAN)
+8u8: Normal4D                           # 4D Normal (until NAN)
+9u8: StrokeWidth                        # Width of Stroke
+16u8: UserDefined(Nu8)                  # Attr. N dimensions (until [NAN])
+
+# Group (paths)
+ATTRIBUTES: [u8]                        # List vertex attributes used until 0
+PATH: [PathOp]                          # List PathOps
+
+# PathOp
+0u8: End                                # End list of PathOps
+1u8: Close                              # Close PathOp
+2u8: Move(u32, ...)                     # Move PathOp (Attribute Indices)
+3u8: Line(u32, ...)                     # Line PathOp (Attribute Indices)
+4u8: Quad(u32, u32, ...)                # Quad PathOp (Attribute Indices)
+5u8: Cubic(u32, u32, u32, ...)          # Cubic PathOp (Attribute Indices)
+
+# Graphic (Also "Model")
+WIDTH: f32
+HEIGHT: f32
+GROUPS: [(u32, GroupProperties)]        # Group ID & Property list (MAX to end).
+FRAMES: [Frame]
+
+# GroupProperties
+0u8: End
+1u8: FillColorRgba(f32x4)
+2u8: StrokeColorRgba(f32x4)
+3u8: StrokeWidth(f32)
+4u8: JoinStyle(u8)
+5u8: FillRule(u8)
+6u8: GlyphID(u32)
+7u8: BitmapPattern(u32)
+8u8: GroupPattern(u32)
+
+# Frame
+TRANSFORMS: [Transform]                 # One Transform For Each Group
+DELAY: u16                              # Millis til next frame, 0 for nonlinear
+ANIMATION: Animation                    # Animation Style
+
+# Transform
+OPS: [TransformOp]                      # List of Transform Operations
+
+# TransformOp
+0u8: End
+1u8: Translate(x: f32, y: f32, z: f32)
+2u8: Scale(x: f32, y: f32, z: f32)
+3u8: Rotate(vx: f32, vy: f32, vz: f32, rot: f32)
+
+# Animation
+0u8: End
+1u8: Jump - no animation
+2u8: Linear (constant speed)
+3u8: Faster at beginning and end of animation(amount_faster: f32)
+4u8: Slower at beginning and end of animation(amount_faster: f32)
+5u8: Fade
+6u8: SrcOver each frame without clearing
+
+# Bitmap
+WIDTH: u16
+HEIGHT: u16
+SRGBA: [f32x4]
 ```
-
-## Base Operations
-```rust
-// Likely to change soon.
-0u32              // "Eof" End of File.
-1u32 (id: u32)    // "Tag" ID Tag for next operation.
-2u32              // "GroupOpen" Operations following will be grouped together.
-3u32              // "GroupClose" Until this operation.
-4u32 (color: u32) // "FillColor" Change fill color
-5u32 (color: u32) // "StrokeColor" Change stroke color
-6u32 (style: u32) // "StrokeJoin" Join style
-7u32 (width: u32) // "StrokeWidth" Stroke width
-8u32 ([T;16])     // "MatrixTransform3d"
-9u32 ([T;9])      // "MatrixTransform2d"
-10u32 ([T;3])     // "Move3d" (Start a path and) Move
-11u32 ([T;2])     // "Move2d" (Start a path and) Move
-12u32 ([T;3])     // "Line3d"
-13u32 ([T;2])     // "Line2d"
-14u32 ([T;3])     // "Quad3d"
-15u32 ([T;2])     // "Quad2d"
-16u32 ([T;3])     // "Cubic3d"
-17u32 ([T;2])     // "Cubic2d"
-18u32 ([u32;1])   // "BranchImage" [id]. On "BranchImage" rendering stops.
-                  // Following branch images are alternate branches from the current frame image.
-19u32 ([u32;2])   // "Animate" [anim: (style: u16, amount: i16), time_delay: (num: u16, den: u16)].
-                  //             anim.style = 0: jump - no animation
-                  //             anim.style = 1: linear (constant speed)
-                  //             anim.style = 2: exponential (faster at beginning and end of animation)
-                  //             anim.style = 3: fade
-20u32 (...TODO)   // "QuaternionTransform3d"
-21u32 (...TODO)   // "QuaternionTransform2d"
-22u32             // "NonZero" fill rule - default fill rule
-23u32             // "EvenOdd" fill rule
-24u32 ([T;3])     // "Translate3d"
-25u32 ([T;2])     // "Translate2d"
-26u32 ([T;3])     // "TranslateFill3d" - Translate fill separate from stroke
-27u32 ([T;2])     // "TranslateFill2d" - Translate fill separate from stroke
-28u32 ([T;3])     // "TranslateStroke3d" - Translate stroke separate from fill
-29u32 ([T;2])     // "TranslateStroke2d" - Translate stroke separate from fill
-30u32 ([u32;2]..) // "Font" [font_id: u32, len: u32, data: &[u32]] - Load a font file and bind the font to an id.
-31u32 ([u32;2]..) // "Text" [font_id: u32, len: u32, text: &str] - Draw text with font (use Translate2d/3d to position it).
-32u32 ([u32;2]..) // "Image" [image_id: u32, len: u32, data: &[u32]] - Load an image file and bind the image to an id.
-33u32 ([u32;3])   // "SetPattern" [image_id: u32, width: u32, height: u32] - Use image as pattern, scaling to width and height
-34u32 ([u32;~9])  // "TextureRect2D" [image_id: u32, xywh: [T;4], tc_xywh: [T;4]] - Draw a 2D rectangle with texture.
-35u32 ([u32;~11]) // "TextureRect3D" [image_id: u32, xyzwhd: [T;6], tc_xywh: [T;4]] - Draw a 3D rectangle with texture.
-36u32 ([u32;~14]) // "TextureQuad2d" [image_id: u32, coords: [[xy: T; 2];4], tc_xywh: [T;4]] - Draw a 2D quad with texture.
-37u32 ([u32;~18]) // "TextureQuad3d" [image_id: u32, coords: [[xy: T; 3];4], tc_xywh: [T;4]] - Draw a 3D quad with texture.
-```
-
-## SVG Extension
-Currently no extensions.
-
-## Inkscape Extension
-Currently no extensions.
