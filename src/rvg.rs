@@ -38,15 +38,15 @@ pub enum Transform {
 
 /// 
 pub struct Frame {
-    transforms: Vec<Transform>,
-    delay: u16,
-    animation: Animation,
+    pub transforms: Vec<Transform>,
+    pub delay: u16,
+    pub animation: Animation,
 }
 
 /// 
 pub enum GroupProperty {
-    FillColorRgba([f32; 4]),
-    StrokeColorRgba([f32; 4]),
+    FillColorRgba([u8; 4]),
+    StrokeColorRgba([u8; 4]),
     StrokeWidth(f32),
     JoinStyle(u8),
     FillRule(u8),
@@ -105,7 +105,7 @@ pub enum Attribute {
 pub struct Graphic {
     pub attributes: Vec<Attribute>,
     pub vertex_list: Vec<f32>,
-    pub group: Vec<PathOp>,
+    pub group: Vec<Vec<PathOp>>,
     pub models: Vec<Model>,
     pub bitmaps: Vec<Bitmap>,
 }
@@ -146,29 +146,31 @@ impl Graphic {
         encoder.write(&f32::NAN.to_le_bytes()).ok()?;
         
         // GROUP
-        for op in &self.group {
-            match op {
-                PathOp::Close() => encoder.write(&[1]).ok()?,
-                PathOp::Move(index) => {
-                    let a = index.to_le_bytes();
-                    encoder.write(&[2, a[0], a[1], a[2], a[3]]).ok()?
+        for group in &self.group {
+            for op in group {
+                match op {
+                    PathOp::Close() => { encoder.write(&[1]).ok()?; },
+                    PathOp::Move(index) => {
+                        let a = index.to_le_bytes();
+                        encoder.write(&[2, a[0], a[1], a[2], a[3]]).ok()?;
+                    }
+                    PathOp::Line(index) => {
+                        let a = index.to_le_bytes();
+                        encoder.write(&[3, a[0], a[1], a[2], a[3]]).ok()?;
+                    }
+                    PathOp::Quad(one, two) => {
+                        let a = one.to_le_bytes();
+                        let b = two.to_le_bytes();
+                        encoder.write(&[4, a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]]).ok()?;
+                    }
+                    PathOp::Cubic(one, two, three) => {
+                        let a = one.to_le_bytes();
+                        let b = two.to_le_bytes();
+                        let c = three.to_le_bytes();
+                        encoder.write(&[5, a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3], c[0], c[1], c[2], c[3]]).ok()?;
+                    }
                 }
-                PathOp::Line(index) => {
-                    let a = index.to_le_bytes();
-                    encoder.write(&[3, a[0], a[1], a[2], a[3]]).ok()?
-                }
-                PathOp::Quad(one, two) => {
-                    let a = one.to_le_bytes();
-                    let b = two.to_le_bytes();
-                    encoder.write(&[4, a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]]).ok()?
-                }
-                PathOp::Cubic(one, two, three) => {
-                    let a = one.to_le_bytes();
-                    let b = two.to_le_bytes();
-                    let c = three.to_le_bytes();
-                    encoder.write(&[5, a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3], c[0], c[1], c[2], c[3]]).ok()?
-                }
-            };
+            }
         }
         encoder.write(&[0]).ok()?;
         
@@ -182,30 +184,22 @@ impl Graphic {
                 encoder.write(&group_id.to_le_bytes()).ok()?;
                 for prop in group_props {
                     use GroupProperty::*;
-                    match prop {
+                    match *prop {
                         FillColorRgba([r, g, b, a]) => {
-                            encoder.write(&[1]).ok()?;
-                            encoder.write(&r.to_le_bytes()).ok()?;
-                            encoder.write(&g.to_le_bytes()).ok()?;
-                            encoder.write(&b.to_le_bytes()).ok()?;
-                            encoder.write(&a.to_le_bytes()).ok()?;
+                            encoder.write(&[1, r, g, b, a]).ok()?;
                         }
                         StrokeColorRgba([r, g, b, a]) => {
-                            encoder.write(&[2]).ok()?;
-                            encoder.write(&r.to_le_bytes()).ok()?;
-                            encoder.write(&g.to_le_bytes()).ok()?;
-                            encoder.write(&b.to_le_bytes()).ok()?;
-                            encoder.write(&a.to_le_bytes()).ok()?;
+                            encoder.write(&[2, r, g, b, a]).ok()?;
                         }
                         StrokeWidth(width) => {
                             encoder.write(&[3]).ok()?;
                             encoder.write(&width.to_le_bytes()).ok()?;
                         }
                         JoinStyle(style) => {
-                            encoder.write(&[4, *style]).ok()?;
+                            encoder.write(&[4, style]).ok()?;
                         }
                         FillRule(rule) => {
-                            encoder.write(&[5, *rule]).ok()?;
+                            encoder.write(&[5, rule]).ok()?;
                         }
                         GlyphID(id) => {
                             let a = id.to_le_bytes();

@@ -46,8 +46,8 @@ FRAMES: [Frame]
 
 # GroupProperties
 0u8: End
-1u8: FillColorRgba(f32x4)
-2u8: StrokeColorRgba(f32x4)
+1u8: FillColorRgba(u8x4)
+2u8: StrokeColorRgba(u8x4)
 3u8: StrokeWidth(f32)
 4u8: JoinStyle(u8)
 5u8: FillRule(u8)

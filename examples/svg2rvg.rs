@@ -1,24 +1,30 @@
 //! Convert an SVG into an RVG.
 
 use std::io::Write;
-use rvg::{Block, GraphicOps};
+use rvg::{GroupProperty, Graphic, PathOp, Model};
 use usvg::{NodeKind, Paint, PathSegment};
 
-pub fn search_add(pts: &mut Vec<(u16,u16)>, pt: (u16,u16)) -> u16 {
-    for i in 0..pts.len() {
-        if pts[i] == pt {
-            return i as u16;
+pub fn search_add(pts: &mut Vec<f32>, pt: &[f64]) -> u32 {
+    let stride = pt.len();
+    let pt = (pt[0] as f32, pt[1] as f32);
+
+    for i in (0..pts.len()).step_by(stride) {
+        if pt.0 == pts[i] && pt.1 == pts[i + 1] {
+            return i as u32;
         }
     }
-    pts.push(pt);
-    return pts.len() as u16 - 1;
+    pts.push(pt.0);
+    pts.push(pt.1);
+    return pts.len() as u32 - 1;
 }
 
 /// Convert an SVG string into RVG byte data.
-fn rvg_from_svg(svg: &str) -> Vec<u8> {
+fn rvg_from_svg<W: Write>(svg: &str, w: W) {
+    let mut group = Vec::new();
+    let mut groups = Vec::new();
+
     // Build a new RVG.
     let mut pts = vec![];
-    let mut ops = vec![];
 
     // Simplify SVG with usvg.
     let tree = usvg::Tree::from_str(&svg, &usvg::Options::default()).unwrap();
@@ -26,14 +32,10 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
     // Render
     let mut iter = tree.root().descendants();
 
-    let (width, height): (f64, f64) = if let Some(node) = iter.next() {
+    let (width, height): (f32, f32) = if let Some(node) = iter.next() {
         match *node.borrow() {
-            NodeKind::Svg(svg) => {
-                (svg.size.width(), svg.size.height())
-            }
-            _ => {
-                panic!("Not an SVG!");
-            }
+            NodeKind::Svg(svg) => (svg.size.width() as f32, svg.size.height() as f32),
+            _ => panic!("Not an SVG!"),
         }
     } else {
         panic!("SVG is an empty file!");
@@ -41,74 +43,45 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
 
     println!("WH: ({} {})", width, height);
 
-    let ar = (65536.0 * height / width) as u32;
-    let bgc = 0u64; // TODO
-
     for node in iter {
         match &*node.borrow() {
             NodeKind::Path(path) => {
-                // Fill Color
-                let (red, green, blue, alpha) = if let Some(fill) = &path.fill {
-                    let (red, green, blue) = if let Paint::Color(c) = fill.paint {
-                        ((c.red as f64) / 255.0,
-                        (c.green as f64) / 255.0,
-                        (c.blue as f64) / 255.0)
+                let mut properties = Vec::new();
+            
+                // Fill Color if it exists.
+                if let Some(fill) = &path.fill {
+                    if let Paint::Color(c) = fill.paint {
+                        let alpha = (fill.opacity.value() * 255.0) as u8;
+                        properties.push(GroupProperty::FillColorRgba([c.red, c.green, c.blue, alpha]));
                     } else {
-                        (0.0, 0.0, 0.0)
+                        panic!("Linked paint server not supported!");
                     };
-                    let alpha = fill.opacity.value();
-                    ops.push(GraphicOps::Solid as u8);
-                    (red, green, blue, alpha)
-                } else {
-                    (0.0, 0.0, 0.0, 0.0)
-                };
-                ops.extend(((red * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                ops.extend(((green * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                ops.extend(((blue * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                ops.extend(((alpha * (u16::MAX as f64)) as u16).to_be_bytes().iter());
+                }
 
                 // Stroke Width & Color
                 if let Some(stroke) = &path.stroke {
                     // Color
-                    let (red, green, blue) = if let Paint::Color(c) = stroke.paint {
-                        ((c.red as f64) / 255.0,
-                        (c.green as f64) / 255.0,
-                        (c.blue as f64) / 255.0)
+                    if let Paint::Color(c) = stroke.paint {
+                        properties.push(GroupProperty::StrokeColorRgba([c.red, c.green, c.blue, (stroke.opacity.value() * 255.0) as u8]));
                     } else {
-                        (0.0, 0.0, 0.0)
+                        panic!("Linked paint server not supported!");
                     };
-                    let alpha = stroke.opacity.value();
-                    ops.push(GraphicOps::Stroke as u8);
-                    ops.extend(((red * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                    ops.extend(((green * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                    ops.extend(((blue * (u16::MAX as f64)) as u16).to_be_bytes().iter());
-                    ops.extend(((alpha * (u16::MAX as f64)) as u16).to_be_bytes().iter());
                     
-                    // Width
-                    let stroke_width = stroke.width.value() / width;
-                    ops.push(GraphicOps::Width as u8);
-                    ops.extend(((stroke_width * (u16::MAX as f64)) as u16).to_be_bytes().iter());
+                    properties.push(GroupProperty::StrokeWidth(stroke.width.value() as f32));
                 }
+
+                let mut pathops = vec![];
 
                 for subpath in path.data.subpaths() {
                     for segment in subpath.0 {
-                        match segment {
+                        match *segment {
                             PathSegment::MoveTo {x, y} => {
-                                // Generate MoveTo command.
-                                println!("MOVE {} {}", x, y);
-                                let x = (x * 16384 as f64 + 24576.0) as u16;
-                                let y = (y * 16384 as f64 + 24576.0) as u16;
-                                let i = search_add(&mut pts, (x,y));
-                                ops.push(GraphicOps::Move as u8);
-                                ops.extend(i.to_be_bytes().iter());
+                                let i = search_add(&mut pts, &[x, y]);
+                                pathops.push(PathOp::Move(i));
                             }
                             PathSegment::LineTo {x, y} => {
-                                println!("LINE {} {}", x, y);
-                                let x = (x * 16384 as f64 + 24576.0) as u16;
-                                let y = (y * 16384 as f64 + 24576.0) as u16;
-                                let i = search_add(&mut pts, (x,y));
-                                ops.push(GraphicOps::Line as u8);
-                                ops.extend(i.to_be_bytes().iter());
+                                let i = search_add(&mut pts, &[x, y]);
+                                pathops.push(PathOp::Line(i));
                             }
                             PathSegment::CurveTo {
                                 x1,
@@ -118,27 +91,20 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
                                 x,
                                 y,
                             } => {
-                                let x = (x * 16384 as f64 + 24576.0) as u16;
-                                let y = (y * 16384 as f64 + 24576.0) as u16;
-                                let x1 = (x1 * 16384 as f64 + 24576.0) as u16;
-                                let y1 = (y1 * 16384 as f64 + 24576.0) as u16;
-                                let x2 = (x2 * 16384 as f64 + 24576.0) as u16;
-                                let y2 = (y2 * 16384 as f64 + 24576.0) as u16;
-
-                                let i = search_add(&mut pts, (x1,y1));
-                                let j = search_add(&mut pts, (x2,y2));
-                                let k = search_add(&mut pts, (x,y));
-
-                                ops.push(GraphicOps::Cubic as u8);
-                                ops.extend(i.to_be_bytes().iter());
-                                ops.extend(j.to_be_bytes().iter());
-                                ops.extend(k.to_be_bytes().iter());
+                                let i = search_add(&mut pts, &[x1, y1]);
+                                let j = search_add(&mut pts, &[x2,y2]);
+                                let k = search_add(&mut pts, &[x,y]);
+                                pathops.push(PathOp::Cubic(i, j, k));
                             }
-                            PathSegment::ClosePath {} => { }
+                            PathSegment::ClosePath {} => {
+                                pathops.push(PathOp::Close());
+                            }
                         }
                     }
-                    ops.push(GraphicOps::Close as u8);
                 }
+
+                groups.push((group.len() as u32, properties));
+                group.push(pathops);
 
                 // END PATH
             }
@@ -149,12 +115,20 @@ fn rvg_from_svg(svg: &str) -> Vec<u8> {
     }
 
     // Do the encoding.
-    let mut rvg = rvg::Rvg::new();
-
-    rvg.block(Block::points2d(pts.as_slice()));
-    rvg.block(Block::graphic(ar, bgc, ops.as_slice()));
-
-    rvg.into_vec()
+    let graphic = Graphic {
+        attributes: Vec::new(), // Don't use any attributes
+        vertex_list: Vec::new(),
+        group,
+        models: vec![Model {
+            width, height, groups, frames: vec![rvg::Frame {
+                transforms: Vec::new(),
+                delay: 0,
+                animation: rvg::Animation::Done,
+            }],
+        }],
+        bitmaps: Vec::new(),
+    };
+    graphic.save(w).unwrap();
 }
 
 fn main() {
@@ -162,9 +136,7 @@ fn main() {
     assert_eq!(args.len(), 2);
     let svg = std::fs::read_to_string(&args[1]).unwrap();
 
-    let data = rvg_from_svg(&svg);
-
     let fl = std::fs::File::create(format!("{}.rvg", args[1])).unwrap();
     let ref mut bw = std::io::BufWriter::new(fl);
-    bw.write_all(data.as_slice()).unwrap();
+    rvg_from_svg(&svg, bw);
 }
