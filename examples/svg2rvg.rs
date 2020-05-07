@@ -1,7 +1,7 @@
 //! Convert an SVG into an RVG.
 
+use rvg::{Graphic, GroupProperty, Model, PathOp};
 use std::io::Write;
-use rvg::{GroupProperty, Graphic, PathOp, Model};
 use usvg::{NodeKind, Paint, PathSegment};
 
 pub fn search_add(pts: &mut Vec<f32>, pt: &[f64]) -> u32 {
@@ -34,7 +34,9 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
 
     let (width, height): (f32, f32) = if let Some(node) = iter.next() {
         match *node.borrow() {
-            NodeKind::Svg(svg) => (svg.size.width() as f32, svg.size.height() as f32),
+            NodeKind::Svg(svg) => {
+                (svg.size.width() as f32, svg.size.height() as f32)
+            }
             _ => panic!("Not an SVG!"),
         }
     } else {
@@ -47,12 +49,14 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
         match &*node.borrow() {
             NodeKind::Path(path) => {
                 let mut properties = Vec::new();
-            
+
                 // Fill Color if it exists.
                 if let Some(fill) = &path.fill {
                     if let Paint::Color(c) = fill.paint {
                         let alpha = (fill.opacity.value() * 255.0) as u8;
-                        properties.push(GroupProperty::FillColorRgba([c.red, c.green, c.blue, alpha]));
+                        properties.push(GroupProperty::FillColorRgba([
+                            c.red, c.green, c.blue, alpha,
+                        ]));
                     } else {
                         panic!("Linked paint server not supported!");
                     };
@@ -62,12 +66,19 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
                 if let Some(stroke) = &path.stroke {
                     // Color
                     if let Paint::Color(c) = stroke.paint {
-                        properties.push(GroupProperty::StrokeColorRgba([c.red, c.green, c.blue, (stroke.opacity.value() * 255.0) as u8]));
+                        properties.push(GroupProperty::StrokeColorRgba([
+                            c.red,
+                            c.green,
+                            c.blue,
+                            (stroke.opacity.value() * 255.0) as u8,
+                        ]));
                     } else {
                         panic!("Linked paint server not supported!");
                     };
-                    
-                    properties.push(GroupProperty::StrokeWidth(stroke.width.value() as f32));
+
+                    properties.push(GroupProperty::StrokeWidth(
+                        stroke.width.value() as f32,
+                    ));
                 }
 
                 let mut pathops = vec![];
@@ -75,11 +86,11 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
                 for subpath in path.data.subpaths() {
                     for segment in subpath.0 {
                         match *segment {
-                            PathSegment::MoveTo {x, y} => {
+                            PathSegment::MoveTo { x, y } => {
                                 let i = search_add(&mut pts, &[x, y]);
                                 pathops.push(PathOp::Move(i));
                             }
-                            PathSegment::LineTo {x, y} => {
+                            PathSegment::LineTo { x, y } => {
                                 let i = search_add(&mut pts, &[x, y]);
                                 pathops.push(PathOp::Line(i));
                             }
@@ -92,8 +103,8 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
                                 y,
                             } => {
                                 let i = search_add(&mut pts, &[x1, y1]);
-                                let j = search_add(&mut pts, &[x2,y2]);
-                                let k = search_add(&mut pts, &[x,y]);
+                                let j = search_add(&mut pts, &[x2, y2]);
+                                let k = search_add(&mut pts, &[x, y]);
                                 pathops.push(PathOp::Cubic(i, j, k));
                             }
                             PathSegment::ClosePath {} => {
@@ -120,7 +131,10 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
         vertex_list: pts,
         group,
         models: vec![Model {
-            width, height, groups, frames: vec![rvg::Frame {
+            width,
+            height,
+            groups,
+            frames: vec![rvg::Frame {
                 transforms: Vec::new(),
                 delay: 0,
                 animation: rvg::Animation::Done,

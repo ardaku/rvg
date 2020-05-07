@@ -42,7 +42,7 @@ pub fn render_from_rvg(rvg: &[u8], raster: &mut Raster<Rgba8p>, x: u16, y: u16, 
             }
             BlockTypes::Graphic => {
                 println!("Found Graphic!");
-            
+
                 let ar = u32::from_be_bytes(clone_into_array(&data[1..5]));
                 let _bgc = u64::from_be_bytes(clone_into_array(&data[5..13])); // TODO
                 let mut fill_color = Rgba8p::new(0, 0, 0, 0);
@@ -56,9 +56,9 @@ pub fn render_from_rvg(rvg: &[u8], raster: &mut Raster<Rgba8p>, x: u16, y: u16, 
                 let height = (graphic_width as f32 * (ar as f32 / 65536.0)) as u32;
 
                 let mut i = 13;
-                
+
                 println!("Entering Loop!");
-                
+
                 loop {
                     if i >= data.len() { break };
                     let opcode = data[i];
@@ -119,7 +119,7 @@ pub fn render_from_rvg(rvg: &[u8], raster: &mut Raster<Rgba8p>, x: u16, y: u16, 
                             println!(":PATH:");
                             for p in path.iter() {
                                 use footile::PathOp::*;
-                            
+
                                 match p {
                                     Close() => { println!("CLOSE") },
                                     Move(x, y) => { println!("MOVE {} {}", x, y) },
@@ -137,7 +137,7 @@ pub fn render_from_rvg(rvg: &[u8], raster: &mut Raster<Rgba8p>, x: u16, y: u16, 
                             }
                             let alpha: u8 = pen_color.alpha().into();
                             if alpha != 0 && pen_width != 0 { // Not transparent
-                                raster.composite_matte((), p.stroke(&path), (), 
+                                raster.composite_matte((), p.stroke(&path), (),
                                     pen_color, SrcOver
                                 );
                                 p.clear_matte();
