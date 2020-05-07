@@ -14,7 +14,7 @@ readme = "README.md"
 ruzstd = "0.2" # For Decoding ZStd Compression
 zstd = { optional = true, version = "0.5" } # For Encoding ZStd Compression
 footile = { optional = true, version = "0.4" }
-pix = { optional = true, version = "0.12" }
+pix = "0.12"
 
 [dev-dependencies]
 png_pong = "0.4"
@@ -24,4 +24,4 @@ svgtypes = "0.5"
 
 [features]
 default = ["zstd"]
-render = ["footile", "pix"]
+render = ["footile"]
