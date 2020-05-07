@@ -10,12 +10,12 @@ pub fn search_add(pts: &mut Vec<f32>, pt: &[f64], vbw: f32, vbh: f32) -> u32 {
 
     for i in (0..pts.len()).step_by(stride) {
         if pt.0 == pts[i] && pt.1 == pts[i + 1] {
-            return i as u32;
+            return (i / stride) as u32;
         }
     }
     pts.push(pt.0);
     pts.push(pt.1);
-    return pts.len() as u32 / 2 - 1;
+    return (pts.len() / stride) as u32 - 1;
 }
 
 /// Convert an SVG string into RVG byte data.
@@ -114,6 +114,7 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
                                 let i = search_add(&mut pts, &[x1, y1], ww, hh);
                                 let j = search_add(&mut pts, &[x2, y2], ww, hh);
                                 let k = search_add(&mut pts, &[x, y], ww, hh);
+                                dbg!(k);
                                 pathops.push(PathOp::Cubic(i, j, k));
                             }
                             PathSegment::ClosePath {} => {
