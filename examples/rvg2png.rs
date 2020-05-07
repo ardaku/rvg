@@ -21,7 +21,10 @@ fn main() {
     let mut rvg = Vec::new();
     let mut f = File::open(&args[1]).unwrap();
     f.read_to_end(&mut rvg).unwrap();
-    rvg::render_from_rvg(rvg.as_slice(), &mut raster, 0, 0, 512);
 
-    write_png(Raster::with_raster(&raster), &format!("{}.png", args[1])).unwrap();
+    rvg::Graphic::load(std::io::Cursor::new(&rvg));
+
+//     rvg::render_from_rvg(rvg.as_slice(), &mut raster, 0, 0, 512);
+
+//    write_png(Raster::with_raster(&raster), &format!("{}.png", args[1])).unwrap();
 }

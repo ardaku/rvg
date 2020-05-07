@@ -1,5 +1,5 @@
 use zstd::stream::Encoder;
-use ruzstd::frame_decoder::FrameDecoder;
+use ruzstd::streaming_decoder::StreamingDecoder;
 use std::io::prelude::*;
 
 const FORMAT_HEADER: [u8; 4] = [b'r', b'V', b'g', b'\x00'];
@@ -12,6 +12,7 @@ pub struct Bitmap {
 }
 
 /// 
+#[derive(PartialEq)]
 pub enum Animation {
     /// Must be the last value.
     Done,
@@ -111,8 +112,173 @@ pub struct Graphic {
 }
 
 impl Graphic {
-    pub fn load<R: Read>(reader: R) -> Option<Graphic> {
-        None
+    pub fn load<R: Read>(mut reader: R) -> Option<Graphic> {
+        let mut reader = StreamingDecoder::new(&mut reader).unwrap();
+        let mut buf = vec![];
+        let len = reader.read_to_end(&mut buf).unwrap();
+        dbg!(len);
+        let mut buf = buf.iter().cloned();
+
+        // FORMAT
+        let header = [buf.next()?, buf.next()?, buf.next()?, buf.next()?];
+        if header != FORMAT_HEADER {
+            eprintln!("Headers do not match: {:?} ≠ {:?}", header, FORMAT_HEADER);
+            return None;
+        }
+        
+        // ATTRIBUTE_LIST
+        let mut attributes = Vec::new();
+        loop {
+            attributes.push(match buf.next()? {
+                0 => break,
+                1 => Attribute::Z,
+                2 => Attribute::UvTextureCoordinates,
+                3 => Attribute::Rgb,
+                4 => Attribute::Rbga,
+                5 => Attribute::Alpha,
+                6 => Attribute::Normal2D,
+                7 => Attribute::Normal3D,
+                8 => Attribute::Normal4D,
+                9 => Attribute::StrokeWidth,
+                10 => Attribute::UserDefined(buf.next()?),
+                u => panic!("Unknown attribute {}", u),
+            });
+        }
+        
+        // VERTEX_LIST
+        let mut vertex_list = Vec::new();
+        loop {
+            let value: f32 = f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]);
+            match value {
+                x if x.is_nan() => break,
+                x => vertex_list.push(x),
+            }
+        }
+
+        // GROUP
+        let mut group = Vec::new();
+        'g: loop {
+            let mut path = Vec::new();
+            'p: loop {
+                path.push(match buf.next()? {
+                    0 => break 'p,
+                    1 => PathOp::Close(),
+                    2 => PathOp::Move({
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }),
+                    3 => PathOp::Line({
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }),
+                    4 => PathOp::Quad({
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }, {
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }),
+                    5 => PathOp::Cubic({
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }, {
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }, {
+                        u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])
+                    }),
+                    u => panic!("Unknown path {}", u),
+                });
+            }
+            if path.is_empty() {
+                break 'g;
+            }
+            group.push(path);
+        }
+        
+        // MODELS
+        let mut models = Vec::new();
+        'm: loop {
+            let width = f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]);
+            if width.is_nan() {
+                break 'm;
+            }
+            let height = f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]);
+            
+            let mut groups = Vec::new();
+            'g2: loop {
+                let group_id = u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]);
+                if group_id == u32::MAX {
+                    break 'g2;
+                }
+                
+                let mut group_props = Vec::new();
+                'p2: loop {
+                    group_props.push(match buf.next()? {
+                        0 => break 'p2,
+                        1 => GroupProperty::FillColorRgba([buf.next()?, buf.next()?, buf.next()?, buf.next()?]),
+                        2 => GroupProperty::StrokeColorRgba([buf.next()?, buf.next()?, buf.next()?, buf.next()?]),
+                        3 => GroupProperty::StrokeWidth(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        4 => GroupProperty::JoinStyle(buf.next()?),
+                        5 => GroupProperty::FillRule(buf.next()?),
+                        6 => GroupProperty::GlyphID(u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        7 => GroupProperty::BitmapPattern(u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        8 => GroupProperty::GroupPattern(u32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        u => panic!("Unknown group property: {}", u),
+                    });
+                }
+                
+                groups.push((group_id, group_props));
+            }
+            
+            let mut frames = Vec::new();
+            'f: loop {
+                let mut transforms = Vec::new();
+                't: loop {
+                    transforms.push(match buf.next()? {
+                        0 => break 't,
+                        1 => Transform::Translate(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        2 => Transform::Scale(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        3 => Transform::Rotate(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?]), f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                        u => panic!("Unknown transform: {}", u),
+                    });
+                }
+                let delay = u16::from_le_bytes([buf.next()?, buf.next()?]);
+                let animation = match buf.next()? {
+                    0 => Animation::Done,
+                    1 => Animation::Jump,
+                    2 => Animation::Linear,
+                    3 => Animation::ExpA(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                    4 => Animation::ExpB(f32::from_le_bytes([buf.next()?, buf.next()?, buf.next()?, buf.next()?])),
+                    5 => Animation::Fade,
+                    6 => Animation::Layer,
+                    u => panic!("Unknown animation: {}", u),
+                };
+                
+                let done = animation == Animation::Done;
+                
+                frames.push(Frame { transforms, delay, animation });
+                
+                if done {
+                    break 'f;
+                }
+            }
+            models.push(Model {frames, groups, width, height});
+        }
+            
+        // BITMAPS
+        let mut bitmaps = Vec::new();
+        while let Some(a) = buf.next() {
+            let width = u16::from_le_bytes([a, buf.next()?]);
+            let height = u16::from_le_bytes([buf.next()?, buf.next()?]);
+            let mut srgba = Vec::new();
+            for _ in 0..(width*height*4) {
+                srgba.push(buf.next()?);
+            }
+            bitmaps.push(Bitmap {
+                width, height, srgba
+            });
+        }
+        
+        println!("Load Success!!");
+
+        Some(Graphic {
+            attributes, bitmaps, group, models, vertex_list,
+        })
     }
 
     #[cfg(feature = "zstd")]
@@ -171,6 +337,7 @@ impl Graphic {
                     }
                 }
             }
+            encoder.write(&[0]).ok()?;
         }
         encoder.write(&[0]).ok()?;
         
