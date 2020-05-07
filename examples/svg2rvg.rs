@@ -4,9 +4,9 @@ use rvg::{Graphic, GroupProperty, Model, PathOp};
 use std::io::Write;
 use usvg::{NodeKind, Paint, PathSegment};
 
-pub fn search_add(pts: &mut Vec<f32>, pt: &[f64]) -> u32 {
+pub fn search_add(pts: &mut Vec<f32>, pt: &[f64], vbw: f32, vbh: f32) -> u32 {
     let stride = pt.len();
-    let pt = (pt[0] as f32, pt[1] as f32);
+    let pt = (pt[0] as f32 * vbw, pt[1] as f32 * vbh);
 
     for i in (0..pts.len()).step_by(stride) {
         if pt.0 == pts[i] && pt.1 == pts[i + 1] {
@@ -32,16 +32,17 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
     // Render
     let mut iter = tree.root().descendants();
 
-    let (width, height): (f32, f32) = if let Some(node) = iter.next() {
+    let (width, height, vbw, vbh) = if let Some(node) = iter.next() {
         match *node.borrow() {
             NodeKind::Svg(svg) => {
-                (svg.size.width() as f32, svg.size.height() as f32)
+                (svg.size.width() as f32, svg.size.height() as f32, svg.view_box.rect.width() as f32, svg.view_box.rect.height() as f32)
             }
-            _ => panic!("Not an SVG!"),
+            _ => panic!("Not an SVG!")
         }
     } else {
         panic!("SVG is an empty file!");
     };
+    let (ww, hh) = (width / vbw, height / vbh);
 
     println!("WH: ({} {})", width, height);
 
@@ -77,34 +78,42 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
                     };
 
                     properties.push(GroupProperty::StrokeWidth(
-                        stroke.width.value() as f32,
+                        stroke.width.value() as f32 * ww,
                     ));
                 }
+
+                // Get transform
+                let transform = path.transform;
 
                 let mut pathops = vec![];
 
                 for subpath in path.data.subpaths() {
                     for segment in subpath.0 {
                         match *segment {
-                            PathSegment::MoveTo { x, y } => {
-                                let i = search_add(&mut pts, &[x, y]);
+                            PathSegment::MoveTo { mut x, mut y } => {
+                                transform.apply_to(&mut x, &mut y);
+                                let i = search_add(&mut pts, &[x, y], ww, hh);
                                 pathops.push(PathOp::Move(i));
                             }
-                            PathSegment::LineTo { x, y } => {
-                                let i = search_add(&mut pts, &[x, y]);
+                            PathSegment::LineTo { mut x, mut y } => {
+                                transform.apply_to(&mut x, &mut y);
+                                let i = search_add(&mut pts, &[x, y], ww, hh);
                                 pathops.push(PathOp::Line(i));
                             }
                             PathSegment::CurveTo {
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                x,
-                                y,
+                                mut x1,
+                                mut y1,
+                                mut x2,
+                                mut y2,
+                                mut x,
+                                mut y,
                             } => {
-                                let i = search_add(&mut pts, &[x1, y1]);
-                                let j = search_add(&mut pts, &[x2, y2]);
-                                let k = search_add(&mut pts, &[x, y]);
+                                transform.apply_to(&mut x1, &mut y1);
+                                transform.apply_to(&mut x2, &mut y2);
+                                transform.apply_to(&mut x, &mut y);
+                                let i = search_add(&mut pts, &[x1, y1], ww, hh);
+                                let j = search_add(&mut pts, &[x2, y2], ww, hh);
+                                let k = search_add(&mut pts, &[x, y], ww, hh);
                                 pathops.push(PathOp::Cubic(i, j, k));
                             }
                             PathSegment::ClosePath {} => {
