@@ -15,7 +15,7 @@ pub fn search_add(pts: &mut Vec<f32>, pt: &[f64]) -> u32 {
     }
     pts.push(pt.0);
     pts.push(pt.1);
-    return pts.len() as u32 - 1;
+    return pts.len() as u32 / 2 - 1;
 }
 
 /// Convert an SVG string into RVG byte data.
@@ -117,7 +117,7 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
     // Do the encoding.
     let graphic = Graphic {
         attributes: Vec::new(), // Don't use any attributes
-        vertex_list: Vec::new(),
+        vertex_list: pts,
         group,
         models: vec![Model {
             width, height, groups, frames: vec![rvg::Frame {
