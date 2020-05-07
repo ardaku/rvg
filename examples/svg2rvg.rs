@@ -34,10 +34,13 @@ fn rvg_from_svg<W: Write>(svg: &str, w: W) {
 
     let (width, height, vbw, vbh) = if let Some(node) = iter.next() {
         match *node.borrow() {
-            NodeKind::Svg(svg) => {
-                (svg.size.width() as f32, svg.size.height() as f32, svg.view_box.rect.width() as f32, svg.view_box.rect.height() as f32)
-            }
-            _ => panic!("Not an SVG!")
+            NodeKind::Svg(svg) => (
+                svg.size.width() as f32,
+                svg.size.height() as f32,
+                svg.view_box.rect.width() as f32,
+                svg.view_box.rect.height() as f32,
+            ),
+            _ => panic!("Not an SVG!"),
         }
     } else {
         panic!("SVG is an empty file!");
