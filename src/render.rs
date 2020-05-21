@@ -1,5 +1,5 @@
 use footile::{Plotter, PathBuilder};
-use pix::{ Raster, Region, ops::SrcOver, el::Pixel, rgb::SRgba8, chan::Ch8};
+use pix::{Raster, Region, ops::SrcOver, el::Pixel, rgb::SRgba8, chan::Ch8, matte::Matte8};
 use crate::Graphic;
 
 pub struct ScaledRegion {
@@ -50,10 +50,10 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
     assert!(graphic.models.len() == 1);
 
     let model = &graphic.models[0];
-    let mut p = Plotter::new(model.width as u32, model.height as u32);
+    let mut p = Plotter::new(Raster::with_clear(model.width as u32, model.height as u32));
 
     for (group_id, group_props) in &model.groups {
-        let mut pathbuilder = PathBuilder::new().absolute();
+        let mut pathbuilder = PathBuilder::default().absolute();
 
         println!("Building Path….");
 
@@ -126,7 +126,7 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
         let path = pathbuilder.build();
 
         if fill_color.alpha() != Ch8::new(0u8) {
-            let fill = p.fill(&path, footile::FillRule::NonZero);
+            let fill = p.fill(footile::FillRule::NonZero, &path, Matte8::new(255));
         
             let temp_raster: Raster<pix::el::Pix1<P::Chan, pix::matte::Matte, pix::chan::Premultiplied, pix::chan::Linear>> = Raster::with_raster(fill);
 
@@ -137,9 +137,12 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
                 fill_color.convert(),
                 SrcOver,
             );
+            let mut pr = p.raster();
+            pr.clear();
+            p = Plotter::new(pr);
         }
         if stroke_color.alpha() != Ch8::new(0u8) {
-            let stroke = p.stroke(&path);
+            let stroke = p.stroke(&path, Matte8::new(255));
         
             let temp_raster: Raster<pix::el::Pix1<P::Chan, pix::matte::Matte, pix::chan::Premultiplied, pix::chan::Linear>> = Raster::with_raster(stroke);
         
@@ -150,6 +153,9 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
                 stroke_color.convert(),
                 SrcOver,
             );
+            let mut pr = p.raster();
+            pr.clear();
+            p = Plotter::new(pr);
         }
     }
 }

@@ -1,5 +1,7 @@
 use ruzstd::streaming_decoder::StreamingDecoder;
 use std::io::prelude::*;
+
+#[cfg(feature = "zstd")]
 use zstd::stream::Encoder;
 
 const FORMAT_HEADER: [u8; 4] = [b'r', b'V', b'g', b'\x00'];
