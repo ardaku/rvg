@@ -8,9 +8,12 @@ const FORMAT_HEADER: [u8; 4] = [b'r', b'V', b'g', b'\x00'];
 
 /// Pixel data
 pub struct Bitmap {
-    width: u16,
-    height: u16,
-    srgba: Vec<u8>,
+    /// Width of the image
+    pub width: u16,
+    /// Height of the image
+    pub height: u16,
+    /// Pixels in sRGBA format
+    pub srgba: Vec<u8>,
 }
 
 ///
