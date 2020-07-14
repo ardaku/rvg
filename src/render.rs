@@ -1,6 +1,9 @@
-use footile::{Plotter, PathBuilder};
-use pix::{Raster, Region, ops::SrcOver, el::Pixel, rgb::SRgba8, chan::Ch8, matte::Matte8};
 use crate::Graphic;
+use footile::{PathBuilder, Plotter};
+use pix::{
+    chan::Ch8, el::Pixel, matte::Matte8, ops::SrcOver, rgb::SRgba8, Raster,
+    Region,
+};
 
 pub struct ScaledRegion {
     x: f32,
@@ -12,7 +15,10 @@ pub struct ScaledRegion {
 impl ScaledRegion {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         ScaledRegion {
-            x, y, width, height,
+            x,
+            y,
+            width,
+            height,
         }
     }
 }
@@ -30,17 +36,27 @@ impl From<(f32, f32, f32, f32)> for ScaledRegion {
 }
 
 pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
-    where
-        R: Into<ScaledRegion>,
-        P: Pixel<Alpha = pix::chan::Premultiplied, Gamma = pix::chan::Linear>,
-        P::Chan: From<Ch8>,
+where
+    R: Into<ScaledRegion>,
+    P: Pixel<Alpha = pix::chan::Premultiplied, Gamma = pix::chan::Linear>,
+    P::Chan: From<Ch8>,
 {
     let (xs, ys, dst_region): (_, _, Region) = {
         let r: ScaledRegion = region.into();
         if r.width.is_infinite() || r.height.is_infinite() {
-            (1.0, 1.0, (r.x as i32, r.y as i32, i32::MAX as u32, i32::MAX as u32).into())
+            (
+                1.0,
+                1.0,
+                (r.x as i32, r.y as i32, i32::MAX as u32, i32::MAX as u32)
+                    .into(),
+            )
         } else {
-            (r.width / raster.width() as f32, r.height / raster.height() as f32, (r.x as i32, r.y as i32, r.width as u32, r.height as u32).into())
+            (
+                r.width / raster.width() as f32,
+                r.height / raster.height() as f32,
+                (r.x as i32, r.y as i32, r.width as u32, r.height as u32)
+                    .into(),
+            )
         }
     };
 
@@ -50,7 +66,10 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
     assert!(graphic.models.len() == 1);
 
     let model = &graphic.models[0];
-    let mut p = Plotter::new(Raster::with_clear(model.width as u32, model.height as u32));
+    let mut p = Plotter::new(Raster::with_clear(
+        model.width as u32,
+        model.height as u32,
+    ));
 
     for (group_id, group_props) in &model.groups {
         let mut pathbuilder = PathBuilder::default().absolute();
@@ -62,11 +81,11 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
         for prop in group_props {
             use crate::GroupProperty::*;
             match *prop {
-                FillColorRgba([r, g, b, a]) => {
-                    fill_color = SRgba8::new(r, g, b, a)
+                FillColorRgba([red, green, blue, alpha]) => {
+                    fill_color = SRgba8::new(red, green, blue, alpha)
                 }
-                StrokeColorRgba([r, g, b, a]) => {
-                    stroke_color = SRgba8::new(r, g, b, a)
+                StrokeColorRgba([red, green, blue, alpha]) => {
+                    stroke_color = SRgba8::new(red, green, blue, alpha)
                 }
                 StrokeWidth(w) => pathbuilder = pathbuilder.pen_width(w),
                 JoinStyle(_) => unimplemented!(),
@@ -126,9 +145,17 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
         let path = pathbuilder.build();
 
         if fill_color.alpha() != Ch8::new(0u8) {
-            let fill = p.fill(footile::FillRule::NonZero, &path, Matte8::new(255));
-        
-            let temp_raster: Raster<pix::el::Pix1<P::Chan, pix::matte::Matte, pix::chan::Premultiplied, pix::chan::Linear>> = Raster::with_raster(fill);
+            let fill =
+                p.fill(footile::FillRule::NonZero, &path, Matte8::new(255));
+
+            let temp_raster: Raster<
+                pix::el::Pix1<
+                    P::Chan,
+                    pix::matte::Matte,
+                    pix::chan::Premultiplied,
+                    pix::chan::Linear,
+                >,
+            > = Raster::with_raster(fill);
 
             raster.composite_matte(
                 dst_region,
@@ -143,9 +170,16 @@ pub fn render<P, R>(raster: &mut Raster<P>, graphic: &Graphic, region: R)
         }
         if stroke_color.alpha() != Ch8::new(0u8) {
             let stroke = p.stroke(&path, Matte8::new(255));
-        
-            let temp_raster: Raster<pix::el::Pix1<P::Chan, pix::matte::Matte, pix::chan::Premultiplied, pix::chan::Linear>> = Raster::with_raster(stroke);
-        
+
+            let temp_raster: Raster<
+                pix::el::Pix1<
+                    P::Chan,
+                    pix::matte::Matte,
+                    pix::chan::Premultiplied,
+                    pix::chan::Linear,
+                >,
+            > = Raster::with_raster(stroke);
+
             raster.composite_matte(
                 dst_region,
                 &temp_raster,

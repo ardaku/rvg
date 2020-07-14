@@ -1,8 +1,8 @@
 use pix::rgb::{Rgba8p, SRgba8};
-use pix::{Raster};
+use pix::Raster;
+use rvg::Graphic;
 use std::fs::File;
 use std::io::Read;
-use rvg::Graphic;
 
 pub fn write_png(
     raster: Raster<SRgba8>,
@@ -25,7 +25,8 @@ fn main() {
     let graphic = Graphic::load(std::io::Cursor::new(&rvg)).unwrap();
 
     let model = &graphic.models[0];
-    let mut raster = Raster::<Rgba8p>::with_clear(model.width as u32, model.height as u32);
+    let mut raster =
+        Raster::<Rgba8p>::with_clear(model.width as u32, model.height as u32);
 
     rvg::render(&mut raster, &graphic, ());
 
