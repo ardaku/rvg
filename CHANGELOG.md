@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://code.plopgrizzly.com/s
 
 ## [Unreleased]
 
+## [0.1.0] - 2020-07-13
+### Added
+- `Bitmap`
+- `Frame`
+- `Graphic`
+- `Model`
+- `Animation`
+- `Attribute`
+- `GroupProperty`
+- `PathOp`
+- `Transform`
+
+### Changed
+- New version of the RVG format
+
+### Removed
+- `Block`
+- `Rvg`
+- `GraphicOps`
+- `BlockTypes`
+
 ## [0.0.3] - 2019-11-03
 ### Fixed
 - Not compiling without `footile` feature.
