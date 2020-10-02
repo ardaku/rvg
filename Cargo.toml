@@ -13,7 +13,7 @@ readme = "README.md"
 [dependencies]
 ruzstd = "0.2" # For Decoding ZStd Compression
 zstd = { optional = true, version = "0.5" } # For Encoding ZStd Compression
-footile = { optional = true, version = "0.5" }
+footile = { optional = true, version = "0.6" }
 pix = "0.13"
 
 [dev-dependencies]

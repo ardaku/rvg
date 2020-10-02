@@ -1,5 +1,5 @@
 use crate::Graphic;
-use footile::{PathBuilder, Plotter};
+use footile::{Path2D, Plotter};
 use pix::{
     chan::Ch8, el::Pixel, matte::Matte8, ops::SrcOver, rgb::SRgba8, Raster,
     Region,
@@ -72,7 +72,7 @@ where
     ));
 
     for (group_id, group_props) in &model.groups {
-        let mut pathbuilder = PathBuilder::default().absolute();
+        let mut path = Path2D::default().absolute();
 
         println!("Building Path….");
 
@@ -87,7 +87,7 @@ where
                 StrokeColorRgba([red, green, blue, alpha]) => {
                     stroke_color = SRgba8::new(red, green, blue, alpha)
                 }
-                StrokeWidth(w) => pathbuilder = pathbuilder.pen_width(w),
+                StrokeWidth(w) => path = path.pen_width(w),
                 JoinStyle(_) => unimplemented!(),
                 FillRule(_) => unimplemented!(),
                 GlyphID(_) => unimplemented!(),
@@ -98,20 +98,20 @@ where
 
         for pathop in &graphic.group[*group_id as usize] {
             match *pathop {
-                crate::PathOp::Close() => pathbuilder = pathbuilder.close(),
+                crate::PathOp::Close() => path = path.close(),
                 crate::PathOp::Move(a) => {
                     let (x, y) = (
                         graphic.vertex_list[a as usize * 2] * xs,
                         graphic.vertex_list[a as usize * 2 + 1] * ys,
                     );
-                    pathbuilder = pathbuilder.move_to(x, y);
+                    path = path.move_to(x, y);
                 }
                 crate::PathOp::Line(a) => {
                     let (x, y) = (
                         graphic.vertex_list[a as usize * 2] * xs,
                         graphic.vertex_list[a as usize * 2 + 1] * ys,
                     );
-                    pathbuilder = pathbuilder.line_to(x, y);
+                    path = path.line_to(x, y);
                 }
                 crate::PathOp::Quad(a, b) => {
                     let (bx, by) = (
@@ -122,7 +122,7 @@ where
                         graphic.vertex_list[b as usize * 2] * xs,
                         graphic.vertex_list[b as usize * 2 + 1] * ys,
                     );
-                    pathbuilder = pathbuilder.quad_to(bx, by, cx, cy);
+                    path = path.quad_to(bx, by, cx, cy);
                 }
                 crate::PathOp::Cubic(a, b, c) => {
                     let (bx, by) = (
@@ -137,12 +137,12 @@ where
                         graphic.vertex_list[c as usize * 2] * xs,
                         graphic.vertex_list[c as usize * 2 + 1] * ys,
                     );
-                    pathbuilder = pathbuilder.cubic_to(bx, by, cx, cy, dx, dy);
+                    path = path.cubic_to(bx, by, cx, cy, dx, dy);
                 }
             }
         }
 
-        let path = pathbuilder.build();
+        let path = path.finish();
 
         if fill_color.alpha() != Ch8::new(0u8) {
             let fill =
